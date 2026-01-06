@@ -990,12 +990,14 @@ function updateGizmoPosition() {
 function setupEditButton() {
   editValuesBtn.addEventListener('click', (e) => {
     e.stopPropagation();
+    orbit.enabled = false; // Bloquear órbita al abrir diálogo
     openAxisDialog();
   });
   
   editValuesBtn.addEventListener('touchend', (e) => {
     e.preventDefault();
     e.stopPropagation();
+    orbit.enabled = false; // Bloquear órbita al abrir diálogo
     openAxisDialog();
   });
 }
@@ -1184,7 +1186,8 @@ function selectObject(obj) {
   }
   
   createGizmo(currentMode, obj);
-  orbit.enabled = false;
+  // NO bloquear órbita aquí - permitir inspección
+  // orbit.enabled sigue en true
   exitButton.classList.add('visible');
   spaceToggle.classList.add('visible');
   editValuesBtn.classList.add('visible');
@@ -1302,10 +1305,12 @@ function applyAxisValue() {
   
   updateGizmoPosition();
   closeAxisDialog();
+  orbit.enabled = true; // Reactivar órbita después de aplicar
 }
 
 function closeAxisDialog() {
   axisInputDialog.classList.remove('visible');
+  orbit.enabled = true; // Reactivar órbita al cerrar diálogo
 }
 
 // === POP-UP Y CONFIRMACIÓN ===
@@ -1322,6 +1327,7 @@ function continueMoving() {
   if (selectedObject) {
     saveOriginState();
     showGizmo();
+    orbit.enabled = true; // Reactivar órbita para seguir inspeccionando
   }
 }
 
@@ -1577,7 +1583,8 @@ function onResize() {
 function animate() {
   requestAnimationFrame(animate);
   
-  if (!isManipulating) {
+  // Solo bloquear órbita si estamos ACTIVAMENTE arrastrando
+  if (!isDragging) {
     orbit.update();
   }
   
