@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -81,6 +82,39 @@
     
     .theme-icon {
       font-size: 18px;
+    }
+    
+    /* === BOTÓN FLOTANTE DE EDICIÓN === */
+    #edit-values-btn {
+      position: absolute;
+      width: 56px;
+      height: 56px;
+      background: rgba(255, 149, 0, 0.95);
+      border: 3px solid white;
+      border-radius: 28px;
+      color: white;
+      font-size: 26px;
+      font-weight: 700;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 8px 25px rgba(255, 149, 0, 0.5);
+      cursor: pointer;
+      z-index: 200;
+      transition: 0.2s;
+      pointer-events: auto;
+    }
+    
+    #edit-values-btn.visible {
+      display: flex;
+    }
+    
+    #edit-values-btn:active {
+      transform: scale(0.9);
+    }
+    
+    body.dark-mode #edit-values-btn {
+      border-color: rgba(255, 255, 255, 0.3);
     }
     
     button.start-btn {
@@ -450,6 +484,8 @@
   <span id="space-text">Global</span>
 </button>
 
+<button id="edit-values-btn" onclick="openAxisDialog()">✏️</button>
+
 <svg id="measurement-line" width="100%" height="100%" style="position: absolute; top: 0; left: 0;">
   <defs>
     <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
@@ -572,6 +608,7 @@ const confirmDialog = document.getElementById('confirm-dialog');
 const axisInputDialog = document.getElementById('axis-input-dialog');
 const exitButton = document.getElementById('exit-manipulation');
 const spaceToggle = document.getElementById('space-toggle');
+const editValuesBtn = document.getElementById('edit-values-btn');
 
 // Zoom Inteligente
 let initialCameraDistance = 0;
@@ -924,6 +961,9 @@ function updateGizmoPosition() {
     if (currentSpace === 'local') {
       currentGizmo.rotation.copy(selectedObject.rotation);
     }
+    
+    // Actualizar posición del botón de edición
+    updateEditButtonPosition();
   }
 }
 
@@ -1081,20 +1121,7 @@ function handleDoubleTap(x, y) {
 
   raycaster.setFromCamera(mouse, camera);
   
-  // Verificar si tocó el CENTRO del gizmo (esfera blanca o cubo blanco)
-  if (selectedObject && currentGizmo) {
-    const handle = getIntersectedHandle(x, y);
-    if (handle) {
-      const axis = handle.userData.axis;
-      // Solo abrir diálogo si es el centro (free o uniform)
-      if (axis === 'free' || axis === 'uniform') {
-        openAxisDialog();
-        return;
-      }
-    }
-  }
-  
-  // Si no, verificar objetos
+  // Verificar objetos para selección
   const intersects = raycaster.intersectObjects(objects, false);
 
   if (intersects.length > 0) {
@@ -1127,8 +1154,10 @@ function selectObject(obj) {
   orbit.enabled = false;
   exitButton.classList.add('visible');
   spaceToggle.classList.add('visible');
+  editValuesBtn.classList.add('visible');
   
   saveOriginState();
+  updateEditButtonPosition();
 }
 
 function deselectObject() {
@@ -1149,11 +1178,26 @@ function deselectObject() {
   isManipulating = false;
   exitButton.classList.remove('visible');
   spaceToggle.classList.remove('visible');
+  editValuesBtn.classList.remove('visible');
   
   orbit.enabled = true;
 }
 
 // === DIÁLOGO DE INPUT TRIPLE (X, Y, Z) ===
+function updateEditButtonPosition() {
+  if (!selectedObject || !editValuesBtn.classList.contains('visible')) return;
+  
+  // Proyectar posición del objeto a 2D
+  const objPos = selectedObject.position.clone();
+  objPos.y += 3; // Offset hacia arriba para que flote sobre el gizmo
+  
+  const screenPos = toScreenPosition(objPos);
+  
+  editValuesBtn.style.left = screenPos.x + 'px';
+  editValuesBtn.style.top = screenPos.y + 'px';
+  editValuesBtn.style.transform = 'translate(-50%, -50%)';
+}
+
 function openAxisDialog() {
   if (!selectedObject) return;
   
@@ -1492,6 +1536,11 @@ function animate() {
   
   if (!isManipulating) {
     orbit.update();
+  }
+  
+  // Actualizar posición del botón de edición
+  if (selectedObject && editValuesBtn.classList.contains('visible')) {
+    updateEditButtonPosition();
   }
   
   renderer.render(scene, camera);
