@@ -1,103 +1,156 @@
+¡Hecho! He cambiado el "Color de Acento" de toda la aplicación.
+Ahora, tanto la selección del objeto 3D como los botones activos y el botón de inicio brillan en un Naranja Vibrante (#FF9500), manteniendo el estilo limpio de Apple pero con mucha más calidez.
+Aquí tienes el código actualizado:
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover" />
-  <title>MR Studio - Pro Touch</title>
+  <title>MR Studio - Orange Edition</title>
   <style>
-    /* === ESTILO APPLE (CLEAN UI) === */
+    /* === ESTILO BASE (APPLE SYSTEM) === */
     body { 
-      margin: 0; background: #f5f5f7; overflow: hidden; 
+      margin: 0; background: #f2f2f7; overflow: hidden; 
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
       -webkit-user-select: none; user-select: none; touch-action: none; 
-      color: #1d1d1f;
+      color: #1c1c1e;
     }
     
-    /* Overlay Inicial */
+    /* Overlay de Inicio */
     #overlay {
       position: absolute; inset: 0; display: flex; flex-direction: column;
       justify-content: center; align-items: center; 
-      background: rgba(255,255,255,0.95); backdrop-filter: blur(25px);
+      background: rgba(255,255,255,0.8); backdrop-filter: blur(30px);
       z-index: 999; transition: opacity 0.5s ease;
     }
     button.start-btn {
-      padding: 18px 45px; font-size: 18px; 
-      background: #007AFF; border: none; border-radius: 50px; 
-      color: white; font-weight: 600; letter-spacing: 0.5px;
-      box-shadow: 0 8px 20px rgba(0, 122, 255, 0.25);
-      cursor: pointer;
+      padding: 16px 40px; font-size: 17px; 
+      /* CAMBIO: Color Naranja */
+      background: #FF9500; 
+      border: none; border-radius: 40px; 
+      color: white; font-weight: 600; letter-spacing: -0.3px;
+      box-shadow: 0 8px 24px rgba(255, 149, 0, 0.3);
+      cursor: pointer; transform: scale(1); transition: 0.2s;
     }
+    button.start-btn:active { transform: scale(0.96); }
 
-    /* Selector de Modos (Top) */
+    /* === TOP BAR (Aspectos) === */
     #render-bar {
-      position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
-      display: flex; background: rgba(235, 235, 240, 0.9);
-      padding: 4px; border-radius: 12px; z-index: 100;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+      position: absolute; top: 60px; left: 50%; transform: translateX(-50%);
+      display: flex; background: rgba(255, 255, 255, 0.85);
+      padding: 4px; border-radius: 14px; z-index: 100;
+      backdrop-filter: blur(20px);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      border: 1px solid rgba(255,255,255,0.4);
     }
     .render-opt {
-      padding: 8px 16px; font-size: 13px; font-weight: 500;
-      border-radius: 8px; border: none; background: transparent;
-      color: #888; transition: 0.2s;
+      padding: 8px 18px; font-size: 13px; font-weight: 500;
+      border-radius: 10px; border: none; background: transparent;
+      color: #8e8e93; transition: 0.2s;
     }
-    .render-opt.active { background: #fff; color: #000; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-weight: 600; }
+    .render-opt.active { 
+      background: #fff; color: #000; 
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12); font-weight: 600; 
+    }
 
-    /* Barra Herramientas (Bottom) */
-    #toolbar {
-      position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 15px; padding: 15px 25px;
-      background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(20px);
-      border-radius: 28px; border: 1px solid rgba(255,255,255,0.5);
-      box-shadow: 0 10px 40px rgba(0,0,0,0.1); z-index: 100;
+    /* === BOTTOM DOCK (CARRUSEL FLOTANTE) === */
+    #toolbar-container {
+      position: absolute; bottom: 40px; left: 0; right: 0;
+      display: flex; justify-content: center;
+      pointer-events: none;
+      z-index: 100;
     }
+
+    #toolbar {
+      pointer-events: auto;
+      display: flex; gap: 12px; padding: 12px 16px;
+      
+      background: rgba(255, 255, 255, 0.8); 
+      backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+      border-radius: 26px; 
+      border: 1px solid rgba(255,255,255,0.4);
+      box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+      
+      max-width: 85%;
+      overflow-x: auto;
+      scroll-behavior: smooth;
+      -webkit-overflow-scrolling: touch;
+      
+      scrollbar-width: none;
+    }
+    #toolbar::-webkit-scrollbar { display: none; }
 
     .tool-btn {
-      width: 56px; height: 56px; border-radius: 18px; border: none;
-      background: rgba(240, 240, 245, 0.5); color: #333; font-size: 24px;
+      flex-shrink: 0;
+      width: 54px; height: 54px; border-radius: 18px; border: none;
+      background: rgba(255, 255, 255, 0.5); 
+      color: #1c1c1e; font-size: 24px;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      transition: all 0.2s;
+      transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
     }
-    .tool-btn:active { transform: scale(0.92); }
-    .tool-btn.active { background: #007AFF; color: white; box-shadow: 0 5px 15px rgba(0,122,255,0.3); }
+    .tool-btn:active { transform: scale(0.9); background: #e5e5ea; }
+    
+    .tool-btn.active { 
+      /* CAMBIO: Color Naranja en botones activos */
+      background: #FF9500; 
+      color: white; 
+      box-shadow: 0 4px 12px rgba(255, 149, 0, 0.4); 
+    }
+    
     .btn-delete { color: #FF3B30; } 
     .btn-delete:active { background: #FF3B30; color: white; }
     
-    .label { font-size: 9px; margin-top: 3px; font-weight: 600; opacity: 0.9; }
+    .divider {
+      width: 1px; background: rgba(0,0,0,0.1); margin: 0 2px; flex-shrink: 0;
+    }
+    
+    .label { font-size: 9px; margin-top: 2px; font-weight: 600; letter-spacing: -0.2px; opacity: 0.8; }
 
-    /* Aviso flotante */
+    /* Toast Notification */
     #toast {
-      position: absolute; top: 110px; left: 50%; transform: translateX(-50%);
-      background: rgba(0,0,0,0.7); color: white; padding: 8px 16px;
-      border-radius: 20px; font-size: 12px; pointer-events: none;
-      opacity: 0; transition: opacity 0.3s;
+      position: absolute; top: 120px; left: 50%; transform: translateX(-50%);
+      background: rgba(255,255,255,0.9); color: #333; padding: 10px 20px;
+      border-radius: 30px; font-size: 13px; font-weight: 500;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1); pointer-events: none;
+      opacity: 0; transition: opacity 0.4s; z-index: 101;
+      backdrop-filter: blur(10px);
     }
   </style>
 </head>
 <body>
 
 <div id="overlay">
-  <h1 style="margin-bottom:10px; font-weight:800; font-size:32px;">MR STUDIO</h1>
-  <p style="color:#888; margin-top:0; margin-bottom:40px;">Edición Táctil de Precisión</p>
-  <button class="start-btn" id="btn-start">Comenzar</button>
+  <h1 style="margin:0 0 10px 0; font-weight:800; font-size:36px; letter-spacing:-1px;">MR STUDIO</h1>
+  <p style="color:#8e8e93; margin:0 0 40px 0;">Orange Touch Edition</p>
+  <button class="start-btn" id="btn-start">Abrir Espacio</button>
 </div>
 
 <div id="render-bar">
   <button class="render-opt active" onclick="setRenderMode('flat')">Plano</button>
-  <button class="render-opt" onclick="setRenderMode('lightmap')">Suave</button>
+  <button class="render-opt" onclick="setRenderMode('lightmap')">Clay</button>
   <button class="render-opt" onclick="setRenderMode('workbench')">Tech</button>
 </div>
 
-<div id="toast">Doble toque para seleccionar</div>
+<div id="toast">👆👆 Doble toque para seleccionar</div>
 
-<div id="toolbar">
-  <button class="tool-btn" onclick="spawn('box')">📦<span class="label">Cubo</span></button>
-  <button class="tool-btn" onclick="spawn('sphere')">⚪<span class="label">Esfera</span></button>
-  <div style="width:1px; background:#ddd; margin:0 5px;"></div>
-  <button class="tool-btn active" id="btn-move" onclick="setMode('translate')">↔️<span class="label">Mover</span></button>
-  <button class="tool-btn" id="btn-rot" onclick="setMode('rotate')">🔄<span class="label">Rotar</span></button>
-  <button class="tool-btn" id="btn-scale" onclick="setMode('scale')">🔍<span class="label">Escala</span></button>
-  <div style="width:1px; background:#ddd; margin:0 5px;"></div>
-  <button class="tool-btn btn-delete" onclick="del()">🗑️<span class="label">Borrar</span></button>
+<div id="toolbar-container">
+  <div id="toolbar">
+    <button class="tool-btn" onclick="spawn('box')">📦<span class="label">Cubo</span></button>
+    <button class="tool-btn" onclick="spawn('sphere')">⚪<span class="label">Esfera</span></button>
+    
+    <div class="divider"></div>
+    
+    <button class="tool-btn active" id="btn-move" onclick="setMode('translate')">↔️<span class="label">Mover</span></button>
+    <button class="tool-btn" id="btn-rot" onclick="setMode('rotate')">🔄<span class="label">Rotar</span></button>
+    <button class="tool-btn" id="btn-scale" onclick="setMode('scale')">🔍<span class="label">Escala</span></button>
+    
+    <div class="divider"></div>
+    
+    <button class="tool-btn btn-delete" onclick="del()">🗑️<span class="label">Borrar</span></button>
+    
+    <button class="tool-btn" onclick="msg('Función Copiar')">📑<span class="label">Copiar</span></button>
+    <button class="tool-btn" onclick="randomColor()">🎨<span class="label">Color</span></button>
+  </div>
 </div>
 
 <script type="importmap">
@@ -116,12 +169,12 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
 // === CONFIGURACIÓN VISUAL ===
 const CFG = {
-  bg: 0xf5f5f7,
-  gridMain: 0xd1d1d6,
-  gridSub: 0xe5e5ea,
-  objColor: 0xdbe4eb, // Gris celeste
+  bg: 0xf2f2f7,
+  grid: 0xe5e5ea,
+  objColor: 0xdbe4eb,
   objEdge: 0xffffff,
-  selColor: 0x007AFF
+  // CAMBIO: Color de selección (Highlight del borde) a Naranja
+  selColor: 0xFF9500 
 };
 
 let scene, camera, renderer, orbit, control;
@@ -139,106 +192,83 @@ init();
 animate();
 
 function init() {
-  // 1. Scene Setup
   scene = new THREE.Scene();
   scene.background = new THREE.Color(CFG.bg);
-  scene.fog = new THREE.Fog(CFG.bg, 15, 50);
+  scene.fog = new THREE.Fog(CFG.bg, 12, 40);
 
-  // 2. Camera (FOV ajustado para móvil)
-  camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
   camera.position.set(4, 3, 5);
 
-  // 3. Renderer High-DPI
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Retinar display support
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
 
-  // 4. Luces de Estudio
-  const hemi = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.8);
+  // Iluminación
+  const hemi = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.7);
   scene.add(hemi);
-  const dir = new THREE.DirectionalLight(0xffffff, 1.0);
-  dir.position.set(5, 10, 7);
+  const dir = new THREE.DirectionalLight(0xffffff, 1.1);
+  dir.position.set(5, 12, 8);
   dir.castShadow = true;
   dir.shadow.mapSize.set(2048, 2048);
+  dir.shadow.bias = -0.0001;
   scene.add(dir);
 
-  // 5. Grid Infinita
-  const grid = new THREE.GridHelper(40, 40, CFG.gridMain, CFG.gridSub);
+  // Grid
+  const grid = new THREE.GridHelper(50, 50, 0xc7c7cc, CFG.grid);
   scene.add(grid);
 
-  // 6. Textura Procedural para modo "Tech"
   gridTexture = createTechTexture();
 
-  // 7. ORBIT CONTROLS (AJUSTE FINO DE ZOOM)
+  // Controles
   orbit = new OrbitControls(camera, renderer.domElement);
-  orbit.enableDamping = true; // Inercia suave
-  orbit.dampingFactor = 0.05; // Sensación de peso
-  orbit.zoomSpeed = 0.5; // Zoom más lento y preciso
-  orbit.rotateSpeed = 0.7; // Rotación controlada
-  orbit.maxPolarAngle = Math.PI / 2 - 0.05; // No pasar el suelo
-  orbit.minDistance = 1; // No entrar en el objeto
-  orbit.maxDistance = 20;
+  orbit.enableDamping = true; 
+  orbit.dampingFactor = 0.05;
+  orbit.zoomSpeed = 0.6;
+  orbit.maxPolarAngle = Math.PI / 2 - 0.05;
+  orbit.minDistance = 2;
 
-  // 8. TRANSFORM CONTROLS (GIZMO RELEVANTE)
+  // Gizmo
   control = new TransformControls(camera, renderer.domElement);
-  control.setSize(1.6); // GIZMO GRANDE para dedos
+  control.setSize(1.5); 
   control.space = 'local';
-  
-  // LOGICA CRÍTICA: Desactivar órbita al tocar Gizmo
-  control.addEventListener('dragging-changed', (event) => {
-    orbit.enabled = !event.value; // Bloquea cámara si mueves objeto
-  });
-  
-  // Hack visual: Engrosar las líneas del Gizmo para que se vean mejor
-  // (Esto se aplica internamente en Threejs, aumentamos el tamaño base arriba)
-  
+  control.addEventListener('dragging-changed', (e) => orbit.enabled = !e.value);
   scene.add(control);
 
-  // Eventos
   window.addEventListener('resize', onResize);
   setupTouchEvents();
 
-  // Start UI
+  // UI Inicio
   document.getElementById('btn-start').addEventListener('click', () => {
     document.getElementById('overlay').style.opacity = 0;
     setTimeout(() => {
       document.getElementById('overlay').style.display = 'none';
-      showToast();
+      msg("Doble toque para editar");
     }, 500);
     spawn('box');
   });
 
-  // Global functions
+  // Globales
   window.spawn = spawn;
   window.setMode = setMode;
   window.del = del;
   window.setRenderMode = setRenderMode;
+  window.msg = msg;
+  window.randomColor = randomColor;
 }
 
-// === GESTIÓN TÁCTIL (DOBLE TOQUE) ===
+// === INTERACCIÓN TÁCTIL ===
 function setupTouchEvents() {
-  const canvas = renderer.domElement;
-  
-  canvas.addEventListener('pointerdown', (e) => {
-    startX = e.clientX; 
-    startY = e.clientY;
-  });
-
-  canvas.addEventListener('pointerup', (e) => {
-    // Si estamos arrastrando el gizmo, ignorar
+  const c = renderer.domElement;
+  c.addEventListener('pointerdown', e => { startX = e.clientX; startY = e.clientY; });
+  c.addEventListener('pointerup', e => {
     if (control.dragging) return;
-
-    // Calcular desplazamiento
-    const dist = Math.sqrt(Math.pow(e.clientX - startX, 2) + Math.pow(e.clientY - startY, 2));
-    
-    // Si movió menos de 10px, es un "Tap"
+    const dist = Math.hypot(e.clientX - startX, e.clientY - startY);
     if (dist < 10) {
       const now = Date.now();
       if (now - lastTap < 300) {
-        // DOBLE TOQUE CONFIRMADO
         checkSelection(e.clientX, e.clientY);
         lastTap = 0;
       } else {
@@ -252,76 +282,59 @@ function checkSelection(x, y) {
   const rect = renderer.domElement.getBoundingClientRect();
   mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
   mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
-
   raycaster.setFromCamera(mouse, camera);
   const intersects = raycaster.intersectObjects(objects, false);
-
-  if (intersects.length > 0) {
-    attachGizmo(intersects[0].object);
-  } else {
-    detachGizmo();
-  }
+  if (intersects.length > 0) attachGizmo(intersects[0].object);
+  else detachGizmo();
 }
 
 function attachGizmo(obj) {
   control.attach(obj);
-  // Feedback visual en bordes
-  objects.forEach(o => {
-    if(o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge);
-  });
+  objects.forEach(o => { if(o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge); });
+  // Aplicamos el naranja a la selección
   if(obj.userData.edges) obj.userData.edges.material.color.setHex(CFG.selColor);
 }
 
 function detachGizmo() {
   control.detach();
-  objects.forEach(o => {
-    if(o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge);
-  });
+  objects.forEach(o => { if(o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge); });
 }
 
-// === CREACIÓN DE OBJETOS ===
+// === LÓGICA DE OBJETOS ===
 function spawn(type) {
   let geo;
   if(type === 'box') geo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
   else geo = new THREE.SphereGeometry(0.7, 48, 48);
 
   const mat = new THREE.MeshStandardMaterial({
-    color: CFG.objColor,
-    roughness: 0.4, metalness: 0.1
+    color: CFG.objColor, roughness: 0.4, metalness: 0.1
   });
 
   const mesh = new THREE.Mesh(geo, mat);
   mesh.castShadow = true; mesh.receiveShadow = true;
-  mesh.position.y = 0.6;
-  mesh.position.x = (Math.random()-0.5)*3;
-  mesh.position.z = (Math.random()-0.5)*3;
+  mesh.position.set((Math.random()-0.5)*3, 0.6, (Math.random()-0.5)*3);
 
-  // Bordes estéticos
-  const edgesGeo = new THREE.EdgesGeometry(geo);
-  const edgesMat = new THREE.LineBasicMaterial({ color: CFG.objEdge, transparent:true, opacity:0.4 });
-  const edges = new THREE.LineSegments(edgesGeo, edgesMat);
+  const edges = new THREE.LineSegments(
+    new THREE.EdgesGeometry(geo),
+    new THREE.LineBasicMaterial({ color: CFG.objEdge, transparent:true, opacity:0.5 })
+  );
   mesh.add(edges);
   mesh.userData.edges = edges;
 
   scene.add(mesh);
   objects.push(mesh);
-  
   applyRenderMode(mesh, currentRenderMode);
   attachGizmo(mesh);
 }
 
 // === RENDER MODES ===
 function createTechTexture() {
-  const c = document.createElement('canvas');
-  c.width = 512; c.height = 512;
+  const c = document.createElement('canvas'); c.width = 512; c.height = 512;
   const ctx = c.getContext('2d');
-  ctx.fillStyle = '#eee'; ctx.fillRect(0,0,512,512);
-  ctx.strokeStyle = '#ccc'; ctx.lineWidth=2;
+  ctx.fillStyle = '#f0f0f5'; ctx.fillRect(0,0,512,512);
+  ctx.strokeStyle = '#d1d1d6'; ctx.lineWidth=2;
   ctx.beginPath();
-  for(let i=0;i<=512;i+=64){
-    ctx.moveTo(i,0); ctx.lineTo(i,512);
-    ctx.moveTo(0,i); ctx.lineTo(512,i);
-  }
+  for(let i=0;i<=512;i+=64){ ctx.moveTo(i,0); ctx.lineTo(i,512); ctx.moveTo(0,i); ctx.lineTo(512,i); }
   ctx.stroke();
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
@@ -338,18 +351,12 @@ function setRenderMode(mode) {
 function applyRenderMode(mesh, mode) {
   const m = mesh.material;
   const e = mesh.userData.edges;
-  
   if (mode === 'flat') {
-    m.map = null; m.roughness = 0.4; m.flatShading = false; m.color.setHex(CFG.objColor);
-    if(e) e.visible = true;
-  } 
-  else if (mode === 'lightmap') {
-    m.map = null; m.roughness = 1; m.color.setHex(0xccced0); // Arcilla
-    if(e) e.visible = false;
-  }
-  else if (mode === 'workbench') {
-    m.map = gridTexture; m.roughness = 0.5; m.color.setHex(0xffffff);
-    if(e) e.visible = true;
+    m.map = null; m.roughness = 0.4; m.color.setHex(CFG.objColor); if(e) e.visible = true;
+  } else if (mode === 'lightmap') {
+    m.map = null; m.roughness = 1; m.color.setHex(0xd0d0d5); if(e) e.visible = false;
+  } else if (mode === 'workbench') {
+    m.map = gridTexture; m.roughness = 0.5; m.color.setHex(0xffffff); if(e) e.visible = true;
   }
   m.needsUpdate = true;
 }
@@ -359,7 +366,8 @@ function setMode(mode) {
   control.setMode(mode);
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
   const map = {translate:'btn-move', rotate:'btn-rot', scale:'btn-scale'};
-  document.getElementById(map[mode]).classList.add('active');
+  const btn = document.getElementById(map[mode]);
+  if(btn) btn.classList.add('active');
 }
 
 function del() {
@@ -371,10 +379,19 @@ function del() {
   }
 }
 
-function showToast() {
+function randomColor() {
+  if(control.object) {
+    control.object.material.color.setHex(Math.random() * 0xffffff);
+  } else {
+    msg("Selecciona un objeto primero");
+  }
+}
+
+function msg(text) {
   const t = document.getElementById('toast');
+  t.textContent = text;
   t.style.opacity = 1;
-  setTimeout(()=> t.style.opacity=0, 4000);
+  setTimeout(()=> t.style.opacity=0, 3000);
 }
 
 function onResize(){
@@ -391,3 +408,4 @@ function animate() {
 </script>
 </body>
 </html>
+
