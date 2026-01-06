@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -346,13 +345,32 @@
       padding: 28px;
       border-radius: 24px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-      z-index: 350;
+      z-index: 500;
       display: none;
       min-width: 340px;
     }
     
     #axis-input-dialog.visible {
-      display: block;
+      display: block !important;
+    }
+    
+    body.dark-mode #axis-input-dialog {
+      background: rgba(44, 44, 46, 0.98);
+    }
+    
+    body.dark-mode #axis-input-dialog h3,
+    body.dark-mode #axis-input-dialog .axis-name {
+      color: var(--text-primary);
+    }
+    
+    body.dark-mode .axis-input-field {
+      background: rgba(28, 28, 30, 0.6);
+      border-color: rgba(255, 255, 255, 0.2);
+      color: white;
+    }
+    
+    body.dark-mode .axis-input-field:focus {
+      border-color: #FF9500;
     }
     
     #axis-input-dialog h3 {
@@ -484,7 +502,7 @@
   <span id="space-text">Global</span>
 </button>
 
-<button id="edit-values-btn" onclick="openAxisDialog()">✏️</button>
+<button id="edit-values-btn">✏️</button>
 
 <svg id="measurement-line" width="100%" height="100%" style="position: absolute; top: 0; left: 0;">
   <defs>
@@ -673,6 +691,7 @@ function init() {
 
   window.addEventListener('resize', onResize);
   setupTouchEvents();
+  setupEditButton();
 
   // UI
   document.getElementById('btn-start').addEventListener('click', () => {
@@ -967,6 +986,20 @@ function updateGizmoPosition() {
   }
 }
 
+// === CONFIGURAR BOTÓN DE EDICIÓN ===
+function setupEditButton() {
+  editValuesBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openAxisDialog();
+  });
+  
+  editValuesBtn.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    openAxisDialog();
+  });
+}
+
 // === LÓGICA TÁCTIL ===
 function setupTouchEvents() {
   const canvas = renderer.domElement;
@@ -1189,7 +1222,11 @@ function updateEditButtonPosition() {
   
   // Proyectar posición del objeto a 2D
   const objPos = selectedObject.position.clone();
-  objPos.y += 3; // Offset hacia arriba para que flote sobre el gizmo
+  
+  // Posicionar a la DERECHA y ligeramente arriba del objeto
+  // En lugar de directamente encima
+  objPos.x += 3.5; // Desplazar a la derecha
+  objPos.y += 1.0; // Solo un poco arriba
   
   const screenPos = toScreenPosition(objPos);
   
@@ -1199,7 +1236,12 @@ function updateEditButtonPosition() {
 }
 
 function openAxisDialog() {
-  if (!selectedObject) return;
+  if (!selectedObject) {
+    console.log('No hay objeto seleccionado');
+    return;
+  }
+  
+  console.log('Abriendo diálogo para modo:', currentMode);
   
   const titles = {
     translate: { title: 'Posición Exacta', subtitle: 'Ingresa las coordenadas X, Y, Z' },
@@ -1226,6 +1268,7 @@ function openAxisDialog() {
     document.getElementById('input-z').value = selectedObject.scale.z.toFixed(2);
   }
   
+  console.log('Mostrando diálogo');
   axisInputDialog.classList.add('visible');
   document.getElementById('input-x').focus();
   document.getElementById('input-x').select();
@@ -1548,4 +1591,3 @@ function animate() {
 </script>
 </body>
 </html>
-
