@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0" />
+  <title>MR Studio Mobile</title>
+  <style>
+    body { margin: 0; background: #1a1a1a; overflow: hidden; font-family: 'Segoe UI', sans-serif; -webkit-user-select: none; user-select: none; }
+    
+    /* PANTALLA DE INICIO */
+    #overlay {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      justify-content: center; align-items: center; background: rgba(0,0,0,0.95); z-index: 999;
+      transition: opacity 0.5s;
+    }
+    
+    button.start-btn {
+      padding: 15px 40px; font-size: 20px; background: #2b7fdb; border: none;
+      border-radius: 30px; font-weight: 600; cursor: pointer; color: white;
+      box-shadow: 0 4px 15px rgba(43,127,219,0.4);
+    }
+
+    /* BARRA DE HERRAMIENTAS INFERIOR (Estilo App) */
+    #toolbar {
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 10px; background: rgba(20, 20, 20, 0.9);
+      padding: 10px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px); z-index: 100; max-width: 90%; overflow-x: auto;
+    }
+
+    .tool-btn {
+      width: 50px; height: 50px; border-radius: 12px; border: none;
+      background: #333; color: #fff; font-size: 20px; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: 0.2s; flex-shrink: 0;
+    }
+    .tool-btn:active { transform: scale(0.9); }
+    .tool-btn.active { background: #2b7fdb; color: white; }
+    .tool-label { font-size: 8px; margin-top: 2px; opacity: 0.7; }
+
+    /* INFO PANEL SUPERIOR */
+    #info-panel {
+      position: absolute; top: 10px; left: 10px; pointer-events: none;
+      color: rgba(255,255,255,0.7); font-size: 12px; font-family: monospace;
+    }
+    
+    .delete-btn { background: #cf3434 !important; }
+  </style>
+</head>
+<body>
+
+<div id="overlay">
+  <h1 style="color:#2b7fdb; margin:0;">MR STUDIO</h1>
+  <p style="color:#888; margin-bottom:30px;">Edición Táctil 3D</p>
+  <button class="start-btn" id="btn-start">INICIAR APP</button>
+</div>
+
+<div id="info-panel">
+  Selección: <span id="sel-name" style="color:#2b7fdb; font-weight:bold;">Ninguna</span><br>
+  Modo: <span id="mode-name">Navegación</span>
+</div>
+
+<div id="toolbar">
+  <button class="tool-btn" onclick="spawnObject('box')">
+    📦<span class="tool-label">Cubo</span>
+  </button>
+  <button class="tool-btn" onclick="spawnObject('sphere')">
+    ⚪<span class="tool-label">Esfera</span>
+  </button>
+  
+  <div style="width:1px; background:#555; margin:0 5px;"></div>
+
+  <button class="tool-btn active" id="btn-trans" onclick="setTransformMode('translate')">
+    ↔️<span class="tool-label">Mover</span>
+  </button>
+  <button class="tool-btn" id="btn-rot" onclick="setTransformMode('rotate')">
+    🔄<span class="tool-label">Rotar</span>
+  </button>
+  <button class="tool-btn" id="btn-scale" onclick="setTransformMode('scale')">
+    🔍<span class="tool-label">Escala</span>
+  </button>
+
+  <div style="width:1px; background:#555; margin:0 5px;"></div>
+
+  <button class="tool-btn delete-btn" onclick="deleteSelected()">
+    🗑️<span class="tool-label">Borrar</span>
+  </button>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+  }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { TransformControls } from 'three/addons/controls/TransformControls.js';
+
+// ================= GLOBAL VARIABLES =================
+let scene, camera, renderer;
+let orbit, transformControl;
+const objects = [];
+let raycaster, mouse;
+
+init();
+animate();
+
+function init() {
+  // 1. ESCENA
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1a1a1a);
+  scene.fog = new THREE.Fog(0x1a1a1a, 5, 30);
+
+  // 2. CÁMARA
+  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+  camera.position.set(3, 3, 5);
+
+  // 3. RENDERER (Configurado para móviles)
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Optimización batería
+  renderer.shadowMap.enabled = true;
+  document.body.appendChild(renderer.domElement);
+
+  // 4. LUCES
+  setupLights();
+
+  // 5. GRID & HELPERS
+  const gridHelper = new THREE.GridHelper(20, 40, 0x444444, 0x222222);
+  scene.add(gridHelper);
+
+  // 6. CONTROLES TÁCTILES (ORBIT)
+  orbit = new OrbitControls(camera, renderer.domElement);
+  orbit.enableDamping = true;
+  orbit.dampingFactor = 0.05;
+  orbit.screenSpacePanning = false;
+
+  // 7. CONTROLES DE TRANSFORMACIÓN (GIZMO TÁCTIL)
+  transformControl = new TransformControls(camera, renderer.domElement);
+  transformControl.addEventListener('dragging-changed', function (event) {
+    // Desactivar órbita mientras arrastramos el gizmo
+    orbit.enabled = !event.value;
+  });
+  scene.add(transformControl);
+
+  // 8. RAYCASTER (Para seleccionar con el dedo)
+  raycaster = new THREE.Raycaster();
+  mouse = new THREE.Vector2();
+
+  // EVENTOS
+  window.addEventListener('resize', onWindowResize);
+  // Usamos 'pointerup' para detectar toques que no sean arrastres
+  renderer.domElement.addEventListener('pointerdown', onPointerDown);
+
+  // UI START
+  document.getElementById('btn-start').addEventListener('click', () => {
+    document.getElementById('overlay').style.opacity = 0;
+    setTimeout(() => document.getElementById('overlay').style.display = 'none', 500);
+    // Crear un cubo inicial
+    window.spawnObject('box');
+  });
+
+  // Funciones globales para botones HTML
+  window.spawnObject = spawnObject;
+  window.setTransformMode = setTransformMode;
+  window.deleteSelected = deleteSelected;
+}
+
+function setupLights() {
+  const hemiLight = new THREE.HemisphereLight(0xffffff, 0x444444, 0.6);
+  hemiLight.position.set(0, 20, 0);
+  scene.add(hemiLight);
+
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+  dirLight.position.set(5, 10, 7.5);
+  dirLight.castShadow = true;
+  dirLight.shadow.mapSize.width = 1024;
+  dirLight.shadow.mapSize.height = 1024;
+  scene.add(dirLight);
+}
+
+// ================= LÓGICA DE INTERACCIÓN =================
+
+function onPointerDown(event) {
+  // Solo seleccionar si NO estamos transformando
+  if (transformControl.dragging) return;
+
+  // Calcular posición del toque (0 a 1)
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(objects, false);
+
+  if (intersects.length > 0) {
+    selectObject(intersects[0].object);
+  } else {
+    // Si toca el fondo vacío, deseleccionar
+    selectObject(null);
+  }
+}
+
+function selectObject(object) {
+  if (object) {
+    transformControl.attach(object);
+    document.getElementById('sel-name').innerText = "Objeto Seleccionado";
+    // Feedback visual
+    object.material.emissive.setHex(0x333333);
+    // Restaurar otros
+    objects.forEach(obj => {
+        if(obj !== object) obj.material.emissive.setHex(0x000000);
+    });
+  } else {
+    transformControl.detach();
+    document.getElementById('sel-name').innerText = "Ninguna";
+    objects.forEach(obj => obj.material.emissive.setHex(0x000000));
+  }
+}
+
+// ================= ACCIONES =================
+
+function spawnObject(type) {
+  let geo;
+  switch (type) {
+    case 'box': geo = new THREE.BoxGeometry(1, 1, 1); break;
+    case 'sphere': geo = new THREE.SphereGeometry(0.6, 32, 16); break;
+    default: geo = new THREE.BoxGeometry(1, 1, 1);
+  }
+
+  const mat = new THREE.MeshStandardMaterial({
+    color: Math.random() * 0xffffff,
+    roughness: 0.3,
+    metalness: 0.1
+  });
+
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  mesh.position.y = 0.5;
+  // Offset aleatorio pequeño para no superponer
+  mesh.position.x = (Math.random() - 0.5) * 2;
+  mesh.position.z = (Math.random() - 0.5) * 2;
+
+  scene.add(mesh);
+  objects.push(mesh);
+  selectObject(mesh);
+}
+
+function setTransformMode(mode) {
+  transformControl.setMode(mode);
+  
+  // Actualizar UI botones
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  if(mode === 'translate') document.getElementById('btn-trans').classList.add('active');
+  if(mode === 'rotate') document.getElementById('btn-rot').classList.add('active');
+  if(mode === 'scale') document.getElementById('btn-scale').classList.add('active');
+  
+  document.getElementById('mode-name').innerText = mode.toUpperCase();
+}
+
+function deleteSelected() {
+  const obj = transformControl.object;
+  if (!obj) return;
+  
+  transformControl.detach();
+  scene.remove(obj);
+  
+  const index = objects.indexOf(obj);
+  if (index > -1) objects.splice(index, 1);
+  
+  selectObject(null);
+}
+
+function onWindowResize() {
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+}
+
+function animate() {
+  requestAnimationFrame(animate);
+  orbit.update(); // Necesario para el damping (inercia suave)
+  renderer.render(scene, camera);
+}
+</script>
+</body>
+</html>
