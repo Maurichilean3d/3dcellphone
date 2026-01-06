@@ -76,6 +76,46 @@
       transform: scale(0.9);
     }
 
+    /* === BOTÓN GLOBAL/LOCAL === */
+    #space-toggle {
+      position: absolute;
+      top: 50px;
+      left: 20px;
+      padding: 12px 20px;
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid #FF9500;
+      border-radius: 22px;
+      color: #1c1c1e;
+      font-size: 14px;
+      font-weight: 700;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      box-shadow: 0 4px 15px rgba(255, 149, 0, 0.3);
+      cursor: pointer;
+      z-index: 150;
+      transition: 0.2s;
+      backdrop-filter: blur(10px);
+    }
+    
+    #space-toggle.visible {
+      display: flex;
+    }
+    
+    #space-toggle:active {
+      transform: scale(0.96);
+    }
+    
+    #space-toggle.local {
+      background: rgba(52, 199, 89, 0.95);
+      border-color: #34C759;
+      color: white;
+    }
+    
+    #space-icon {
+      font-size: 18px;
+    }
+
     #toolbar-container {
       position: absolute; bottom: 35px; left: 0; right: 0;
       display: flex; justify-content: center; pointer-events: none; z-index: 100;
@@ -199,7 +239,7 @@
       transform: scale(0.96);
     }
     
-    /* === INPUT PRECISO POR EJE === */
+    /* === INPUT TRIPLE (X, Y, Z) === */
     #axis-input-dialog {
       position: absolute;
       top: 50%;
@@ -207,12 +247,12 @@
       transform: translate(-50%, -50%);
       background: rgba(255, 255, 255, 0.98);
       backdrop-filter: blur(20px);
-      padding: 24px;
-      border-radius: 20px;
+      padding: 28px;
+      border-radius: 24px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
       z-index: 350;
       display: none;
-      min-width: 300px;
+      min-width: 340px;
     }
     
     #axis-input-dialog.visible {
@@ -221,35 +261,64 @@
     
     #axis-input-dialog h3 {
       margin: 0 0 8px 0;
-      font-size: 18px;
-      font-weight: 700;
+      font-size: 20px;
+      font-weight: 800;
       text-align: center;
     }
     
     #axis-input-dialog .axis-name {
       text-align: center;
-      font-size: 14px;
+      font-size: 13px;
       color: #8e8e93;
-      margin-bottom: 16px;
+      margin-bottom: 20px;
       font-weight: 600;
     }
     
-    #axis-input-dialog input {
-      width: 100%;
-      padding: 16px;
-      font-size: 28px;
+    .input-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+    
+    .input-label {
+      width: 30px;
+      height: 30px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: 16px;
+      color: white;
+      flex-shrink: 0;
+    }
+    
+    .input-label.x { background: #FF3B30; }
+    .input-label.y { background: #34C759; }
+    .input-label.z { background: #007AFF; }
+    
+    .axis-input-field {
+      flex: 1;
+      padding: 14px;
+      font-size: 18px;
       font-weight: 700;
       text-align: center;
-      border: 3px solid #FF9500;
-      border-radius: 14px;
+      border: 2px solid #e5e5ea;
+      border-radius: 12px;
       font-family: 'SF Mono', 'Monaco', monospace;
-      margin-bottom: 20px;
-      box-sizing: border-box;
+      transition: 0.2s;
+    }
+    
+    .axis-input-field:focus {
+      border-color: #FF9500;
+      outline: none;
     }
     
     #axis-input-dialog .buttons {
       display: flex;
       gap: 12px;
+      margin-top: 20px;
     }
     
     #axis-input-dialog button {
@@ -301,6 +370,11 @@
 
 <button id="exit-manipulation" onclick="exitManipulation()">✕</button>
 
+<button id="space-toggle" onclick="toggleSpace()">
+  <span id="space-icon">🌍</span>
+  <span id="space-text">Global</span>
+</button>
+
 <svg id="measurement-line" width="100%" height="100%" style="position: absolute; top: 0; left: 0;">
   <defs>
     <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="5" refY="5" orient="auto">
@@ -324,9 +398,24 @@
 </div>
 
 <div id="axis-input-dialog">
-  <h3 id="axis-dialog-title">Mover en Eje X</h3>
-  <div class="axis-name" id="axis-dialog-subtitle">Ingresa el valor de desplazamiento</div>
-  <input type="number" id="axis-input" step="0.1" value="0.00" />
+  <h3 id="axis-dialog-title">Posición Exacta</h3>
+  <div class="axis-name" id="axis-dialog-subtitle">Ingresa las coordenadas X, Y, Z</div>
+  
+  <div class="input-row">
+    <div class="input-label x">X</div>
+    <input type="number" class="axis-input-field" id="input-x" step="0.1" value="0.00" />
+  </div>
+  
+  <div class="input-row">
+    <div class="input-label y">Y</div>
+    <input type="number" class="axis-input-field" id="input-y" step="0.1" value="0.00" />
+  </div>
+  
+  <div class="input-row">
+    <div class="input-label z">Z</div>
+    <input type="number" class="axis-input-field" id="input-z" step="0.1" value="0.00" />
+  </div>
+  
   <div class="buttons">
     <button class="btn-apply" onclick="applyAxisValue()">✓ Aplicar</button>
     <button class="btn-cancel" onclick="closeAxisDialog()">✕ Cancelar</button>
@@ -389,6 +478,7 @@ let currentGizmo = null;
 let selectedObject = null;
 let activeHandle = null;
 let currentMode = 'translate'; // translate, rotate, scale
+let currentSpace = 'world'; // world (global) o local
 
 // Touch Logic
 let lastTapTime = 0;
@@ -406,6 +496,7 @@ const distanceLabel = document.getElementById('distance-label');
 const confirmDialog = document.getElementById('confirm-dialog');
 const axisInputDialog = document.getElementById('axis-input-dialog');
 const exitButton = document.getElementById('exit-manipulation');
+const spaceToggle = document.getElementById('space-toggle');
 
 // Zoom Inteligente
 let initialCameraDistance = 0;
@@ -491,6 +582,7 @@ function init() {
   window.exitManipulation = exitManipulation;
   window.applyAxisValue = applyAxisValue;
   window.closeAxisDialog = closeAxisDialog;
+  window.toggleSpace = toggleSpace;
 }
 
 // === CREAR GIZMOS SEGÚN MODO ===
@@ -509,6 +601,12 @@ function createGizmo(mode, targetObject) {
 
   if (currentGizmo) {
     currentGizmo.position.copy(targetObject.position);
+    
+    // Aplicar rotación local si está en modo local
+    if (currentSpace === 'local') {
+      currentGizmo.rotation.copy(targetObject.rotation);
+    }
+    
     scene.add(currentGizmo);
   }
   
@@ -724,6 +822,11 @@ function removeGizmo() {
 function updateGizmoPosition() {
   if (currentGizmo && selectedObject) {
     currentGizmo.position.copy(selectedObject.position);
+    
+    // Mantener rotación local si está en modo local
+    if (currentSpace === 'local') {
+      currentGizmo.rotation.copy(selectedObject.rotation);
+    }
   }
 }
 
@@ -881,12 +984,16 @@ function handleDoubleTap(x, y) {
 
   raycaster.setFromCamera(mouse, camera);
   
-  // Verificar si tocó un handle del gizmo
+  // Verificar si tocó el CENTRO del gizmo (esfera blanca o cubo blanco)
   if (selectedObject && currentGizmo) {
     const handle = getIntersectedHandle(x, y);
-    if (handle && handle.userData.axis && handle.userData.axis !== 'free' && handle.userData.axis !== 'uniform') {
-      openAxisDialog(handle.userData.axis);
-      return;
+    if (handle) {
+      const axis = handle.userData.axis;
+      // Solo abrir diálogo si es el centro (free o uniform)
+      if (axis === 'free' || axis === 'uniform') {
+        openAxisDialog();
+        return;
+      }
     }
   }
   
@@ -922,6 +1029,7 @@ function selectObject(obj) {
   createGizmo(currentMode, obj);
   orbit.enabled = false;
   exitButton.classList.add('visible');
+  spaceToggle.classList.add('visible');
   
   saveOriginState();
 }
@@ -943,61 +1051,69 @@ function deselectObject() {
   closeAxisDialog();
   isManipulating = false;
   exitButton.classList.remove('visible');
+  spaceToggle.classList.remove('visible');
   
   orbit.enabled = true;
 }
 
-// === DIÁLOGO DE INPUT POR EJE ===
-function openAxisDialog(axis) {
-  currentAxis = axis;
-  const axisNames = {
-    x: { title: 'Mover en Eje X', subtitle: 'Rojo - Horizontal', unit: 'm' },
-    y: { title: 'Mover en Eje Y', subtitle: 'Verde - Vertical', unit: 'm' },
-    z: { title: 'Mover en Eje Z', subtitle: 'Azul - Profundidad', unit: 'm' }
+// === DIÁLOGO DE INPUT TRIPLE (X, Y, Z) ===
+function openAxisDialog() {
+  if (!selectedObject) return;
+  
+  const titles = {
+    translate: { title: 'Posición Exacta', subtitle: 'Ingresa las coordenadas X, Y, Z' },
+    rotate: { title: 'Rotación Exacta', subtitle: 'Ingresa los ángulos en grados (°)' },
+    scale: { title: 'Escala Exacta', subtitle: 'Ingresa los factores de escala' }
   };
   
-  if (currentMode === 'rotate') {
-    axisNames.x = { title: 'Rotar en Eje X', subtitle: 'Pitch', unit: '°' };
-    axisNames.y = { title: 'Rotar en Eje Y', subtitle: 'Yaw', unit: '°' };
-    axisNames.z = { title: 'Rotar en Eje Z', subtitle: 'Roll', unit: '°' };
-  } else if (currentMode === 'scale') {
-    axisNames.x = { title: 'Escalar en Eje X', subtitle: 'Ancho', unit: 'x' };
-    axisNames.y = { title: 'Escalar en Eje Y', subtitle: 'Alto', unit: 'x' };
-    axisNames.z = { title: 'Escalar en Eje Z', subtitle: 'Profundidad', unit: 'x' };
-  }
-  
-  const info = axisNames[axis];
+  const info = titles[currentMode];
   document.getElementById('axis-dialog-title').textContent = info.title;
   document.getElementById('axis-dialog-subtitle').textContent = info.subtitle;
   
-  let currentValue = 0;
+  // Rellenar valores actuales
   if (currentMode === 'translate') {
-    currentValue = selectedObject.position[axis] - originPosition[axis];
+    document.getElementById('input-x').value = selectedObject.position.x.toFixed(2);
+    document.getElementById('input-y').value = selectedObject.position.y.toFixed(2);
+    document.getElementById('input-z').value = selectedObject.position.z.toFixed(2);
   } else if (currentMode === 'rotate') {
-    currentValue = (selectedObject.rotation[axis] * 180 / Math.PI).toFixed(1);
+    document.getElementById('input-x').value = (selectedObject.rotation.x * 180 / Math.PI).toFixed(1);
+    document.getElementById('input-y').value = (selectedObject.rotation.y * 180 / Math.PI).toFixed(1);
+    document.getElementById('input-z').value = (selectedObject.rotation.z * 180 / Math.PI).toFixed(1);
   } else if (currentMode === 'scale') {
-    currentValue = selectedObject.scale[axis].toFixed(2);
+    document.getElementById('input-x').value = selectedObject.scale.x.toFixed(2);
+    document.getElementById('input-y').value = selectedObject.scale.y.toFixed(2);
+    document.getElementById('input-z').value = selectedObject.scale.z.toFixed(2);
   }
   
-  document.getElementById('axis-input').value = currentValue;
   axisInputDialog.classList.add('visible');
-  document.getElementById('axis-input').focus();
-  document.getElementById('axis-input').select();
+  document.getElementById('input-x').focus();
+  document.getElementById('input-x').select();
 }
 
 function applyAxisValue() {
-  const input = document.getElementById('axis-input');
-  const value = parseFloat(input.value);
+  if (!selectedObject) return;
   
-  if (!selectedObject || !currentAxis || isNaN(value)) return;
+  const x = parseFloat(document.getElementById('input-x').value);
+  const y = parseFloat(document.getElementById('input-y').value);
+  const z = parseFloat(document.getElementById('input-z').value);
+  
+  if (isNaN(x) || isNaN(y) || isNaN(z)) return;
   
   if (currentMode === 'translate') {
-    selectedObject.position[currentAxis] = originPosition[currentAxis] + value;
+    selectedObject.position.set(x, y, z);
     enforceLimits(selectedObject);
   } else if (currentMode === 'rotate') {
-    selectedObject.rotation[currentAxis] = value * Math.PI / 180;
+    selectedObject.rotation.set(
+      x * Math.PI / 180,
+      y * Math.PI / 180,
+      z * Math.PI / 180
+    );
   } else if (currentMode === 'scale') {
-    selectedObject.scale[currentAxis] = Math.max(CFG.minScale, Math.min(CFG.maxScale, value));
+    selectedObject.scale.set(
+      Math.max(CFG.minScale, Math.min(CFG.maxScale, x)),
+      Math.max(CFG.minScale, Math.min(CFG.maxScale, y)),
+      Math.max(CFG.minScale, Math.min(CFG.maxScale, z))
+    );
   }
   
   updateGizmoPosition();
@@ -1006,7 +1122,6 @@ function applyAxisValue() {
 
 function closeAxisDialog() {
   axisInputDialog.classList.remove('visible');
-  currentAxis = null;
 }
 
 // === POP-UP Y CONFIRMACIÓN ===
@@ -1033,6 +1148,26 @@ function finishMoving() {
 
 function exitManipulation() {
   deselectObject();
+}
+
+// === TOGGLE GLOBAL/LOCAL ===
+function toggleSpace() {
+  if (currentSpace === 'world') {
+    currentSpace = 'local';
+    spaceToggle.classList.add('local');
+    document.getElementById('space-icon').textContent = '📍';
+    document.getElementById('space-text').textContent = 'Local';
+  } else {
+    currentSpace = 'world';
+    spaceToggle.classList.remove('local');
+    document.getElementById('space-icon').textContent = '🌍';
+    document.getElementById('space-text').textContent = 'Global';
+  }
+  
+  // Recrear gizmo con nuevo espacio
+  if (selectedObject) {
+    createGizmo(currentMode, selectedObject);
+  }
 }
 
 // === ZOOM INTELIGENTE ===
