@@ -1,10 +1,3 @@
-Entendido. El problema en pantallas táctiles pequeñas es que el Gizmo estándar se esconde dentro del objeto o es muy fino para verlo y tocarlo.
-He realizado cambios agresivos para solucionar esto:
- * Gizmo "X-Ray" (Siempre Visible): He forzado que el controlador de transformación se dibuje siempre encima del objeto. Ya no se esconderá dentro de la geometría, incluso si el objeto es más grande que el gizmo.
- * Tamaño "Jumbo": Aumenté el tamaño del Gizmo de 1.7 a 3.0. Ahora las flechas sobresalen claramente.
- * Brújula de Orientación: Agregué un AxesHelper (Ejes de referencia) fijo en el centro de la escena para que nunca pierdas el "Norte" (dónde es X, Y, Z).
- * Leyenda de Ejes: Agregué una pequeña guía visual en la parte inferior: Rojo=X, Verde=Y, Azul=Z.
-Aquí tienes el código definitivo para ver y tocar sin dudas:
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -80,7 +73,7 @@ Aquí tienes el código definitivo para ver y tocar sin dudas:
     .label { font-size: 9px; margin-top: 3px; font-weight: 700; opacity: 0.7; }
     .divider { width: 1px; background: rgba(0,0,0,0.1); margin: 0 4px; flex-shrink: 0; }
 
-    /* LEYENDA DE EJES (NUEVO) */
+    /* LEYENDA DE EJES */
     #axis-legend {
       position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%);
       display: flex; gap: 15px; font-size: 10px; font-weight: 700;
@@ -101,14 +94,14 @@ Aquí tienes el código definitivo para ver y tocar sin dudas:
 
 <div id="overlay">
   <h1>MR STUDIO</h1>
-  <p>Gizmo Ultra Visible</p>
+  <p>Gizmos ultra visibles</p>
   <button class="start-btn" id="btn-start">Comenzar</button>
 </div>
 
 <div id="render-bar">
-  <button class="render-opt active" onclick="setRenderMode('flat')">Plano</button>
-  <button class="render-opt" onclick="setRenderMode('lightmap')">Clay</button>
-  <button class="render-opt" onclick="setRenderMode('workbench')">Tech</button>
+  <button class="render-opt active" onclick="setRenderMode('flat', event)">Plano</button>
+  <button class="render-opt" onclick="setRenderMode('lightmap', event)">Clay</button>
+  <button class="render-opt" onclick="setRenderMode('workbench', event)">Tech</button>
 </div>
 
 <div id="axis-legend">
@@ -127,6 +120,7 @@ Aquí tienes el código definitivo para ver y tocar sin dudas:
     <button class="tool-btn active" id="btn-move" onclick="setMode('translate')">↔️<span class="label">Mover</span></button>
     <button class="tool-btn" id="btn-rot" onclick="setMode('rotate')">🔄<span class="label">Rotar</span></button>
     <button class="tool-btn" id="btn-scale" onclick="setMode('scale')">🔍<span class="label">Escala</span></button>
+    <button class="tool-btn" id="btn-all" onclick="setMode('all')">✨<span class="label">Todo</span></button>
     <div class="divider"></div>
     <button class="tool-btn btn-delete" onclick="del()">🗑️<span class="label">Borrar</span></button>
     <button class="tool-btn" onclick="randomColor()">🎨<span class="label">Color</span></button>
@@ -155,12 +149,16 @@ const CFG = {
   selColor: 0xFF9500 
 };
 
-let scene, camera, renderer, orbit, control;
+let scene, camera, renderer, orbit;
+let controlT, controlR, controlS; // translate / rotate / scale
+let activeMode = 'translate';
+
 const objects = [];
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 let currentRenderMode = 'flat';
 let gridTexture = null;
+
 let lastTapTime = 0;
 let touchStartX = 0, touchStartY = 0;
 let isGizmoInteracting = false;
@@ -174,7 +172,7 @@ function init() {
   scene.fog = new THREE.Fog(CFG.bg, 10, 40);
 
   camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
-  camera.position.set(4, 4, 6); // Cámara un poco más alta para ver mejor
+  camera.position.set(4, 4, 6);
 
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
@@ -191,14 +189,12 @@ function init() {
   dir.shadow.mapSize.set(2048, 2048);
   scene.add(dir);
 
-  // GRID & AXES HELPER (Brújula)
+  // GRID & AXES
   const grid = new THREE.GridHelper(50, 50, 0xc7c7cc, 0xe5e5ea);
   scene.add(grid);
-  
-  // Ejes Globales en el origen (0,0,0) para referencia
-  const globalAxes = new THREE.AxesHelper(2); 
-  // Hacemos que los ejes sean más visibles (material override)
-  globalAxes.material.depthTest = false; 
+
+  const globalAxes = new THREE.AxesHelper(2);
+  globalAxes.material.depthTest = false;
   globalAxes.renderOrder = 1;
   scene.add(globalAxes);
 
@@ -209,20 +205,41 @@ function init() {
   orbit.dampingFactor = 0.05;
   orbit.maxPolarAngle = Math.PI / 2 - 0.05;
 
-  // === GIZMO MEJORADO (TRANSFORM CONTROLS) ===
-  control = new TransformControls(camera, renderer.domElement);
-  
-  // 1. TAMAÑO JUMBO
-  control.setSize(3.0); // Bastante grande para ver bien las flechas
-  
-  control.space = 'local';
-  
-  control.addEventListener('dragging-changed', (event) => {
+  // === 3 GIZMOS (Mover / Rotar / Escalar) + "Todos" ===
+  controlT = new TransformControls(camera, renderer.domElement);
+  controlR = new TransformControls(camera, renderer.domElement);
+  controlS = new TransformControls(camera, renderer.domElement);
+
+  controlT.setMode('translate');
+  controlR.setMode('rotate');
+  controlS.setMode('scale');
+
+  // Jumbo
+  controlT.setSize(3.0);
+  controlR.setSize(3.0);
+  controlS.setSize(3.0);
+
+  controlT.space = 'local';
+  controlR.space = 'local';
+  controlS.space = 'local';
+
+  const onDraggingChanged = (event) => {
     orbit.enabled = !event.value;
     isGizmoInteracting = event.value;
-  });
+  };
 
-  scene.add(control);
+  controlT.addEventListener('dragging-changed', onDraggingChanged);
+  controlR.addEventListener('dragging-changed', onDraggingChanged);
+  controlS.addEventListener('dragging-changed', onDraggingChanged);
+
+  // Default: solo mover visible
+  controlT.visible = true;
+  controlR.visible = false;
+  controlS.visible = false;
+
+  scene.add(controlT);
+  scene.add(controlR);
+  scene.add(controlS);
 
   window.addEventListener('resize', onResize);
   setupTouchEvents();
@@ -231,7 +248,7 @@ function init() {
     document.getElementById('overlay').style.opacity = 0;
     setTimeout(() => {
       document.getElementById('overlay').style.display = 'none';
-      msg("Doble toque para editar");
+      msg("Doble toque para seleccionar");
     }, 500);
     spawn('box');
   });
@@ -244,32 +261,28 @@ function init() {
   window.randomColor = randomColor;
 }
 
-// === HACK DE VISIBILIDAD "X-RAY" PARA GIZMO ===
-// Esta función recorre los hijos del gizmo en cada frame y fuerza que se dibujen encima
+// === HACK DE VISIBILIDAD "X-RAY" PARA GIZMOS ===
 function updateGizmoVisibility() {
-  if (control && control.object) {
-    // Traverse interno del helper del gizmo (que es un Object3D añadido a la escena)
-    // TransformControls añade un "helper" a la escena automáticamente.
-    // Accedemos a él a través de la escena o children, pero TransformControls hereda de Object3D.
-    
-    control.traverse((child) => {
-      if (child.isMesh || child.isLine) {
-        // Desactivar depthTest hace que se dibuje siempre "al frente"
-        // ignorando si hay objetos tapándolo.
-        if (child.material) {
-          child.material.depthTest = false;
-          child.material.depthWrite = false;
-          child.renderOrder = 999; // Renderizar al final
+  const controls = [controlT, controlR, controlS];
+  controls.forEach((ctrl) => {
+    if (ctrl && ctrl.object && ctrl.visible) {
+      ctrl.traverse((child) => {
+        if (child.isMesh || child.isLine) {
+          if (child.material) {
+            child.material.depthTest = false;
+            child.material.depthWrite = false;
+            child.renderOrder = 999;
+          }
         }
-      }
-    });
-  }
+      });
+    }
+  });
 }
 
 // === OBJETOS ===
 function spawn(type) {
   let geo;
-  if(type === 'box') geo = new THREE.BoxGeometry(1.5, 1.5, 1.5); // Objetos más grandes
+  if(type === 'box') geo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
   else geo = new THREE.SphereGeometry(0.9, 48, 48);
 
   const mat = new THREE.MeshStandardMaterial({
@@ -296,16 +309,20 @@ function spawn(type) {
 // === INPUT ===
 function setupTouchEvents() {
   const canvas = renderer.domElement;
+
   canvas.addEventListener('pointerdown', (e) => {
-    touchStartX = e.clientX; touchStartY = e.clientY;
+    touchStartX = e.clientX; 
+    touchStartY = e.clientY;
   });
+
   canvas.addEventListener('pointerup', (e) => {
     if (isGizmoInteracting) return;
-    if (control.dragging) return;
+    if (controlT.dragging || controlR.dragging || controlS.dragging) return;
+
     const dist = Math.hypot(e.clientX - touchStartX, e.clientY - touchStartY);
     if (dist < 20) {
       const now = Date.now();
-      if (now - lastTapTime < 450) { // Tolerancia tiempo
+      if (now - lastTapTime < 450) {
         checkSelection(e.clientX, e.clientY);
         lastTapTime = 0;
       } else {
@@ -320,28 +337,35 @@ function checkSelection(x, y) {
   mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
   mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(mouse, camera);
+
   const intersects = raycaster.intersectObjects(objects, false);
   if (intersects.length > 0) attachGizmo(intersects[0].object);
   else detachGizmo();
 }
 
 function attachGizmo(obj) {
-  control.attach(obj);
+  controlT.attach(obj);
+  controlR.attach(obj);
+  controlS.attach(obj);
+
   objects.forEach(o => { if(o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge); });
   if(obj.userData.edges) obj.userData.edges.material.color.setHex(CFG.selColor);
-  msg("Seleccionado");
+
+  msg("Objeto seleccionado");
 }
 
 function detachGizmo() {
-  control.detach();
+  controlT.detach();
+  controlR.detach();
+  controlS.detach();
   objects.forEach(o => { if(o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge); });
 }
 
 // === UTILS ===
-function setRenderMode(mode) {
+function setRenderMode(mode, ev) {
   currentRenderMode = mode;
   document.querySelectorAll('.render-opt').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
+  if (ev?.target) ev.target.classList.add('active');
   objects.forEach(o => applyRenderMode(o, mode));
 }
 
@@ -359,16 +383,33 @@ function applyRenderMode(mesh, mode) {
 }
 
 function setMode(mode) {
-  control.setMode(mode);
+  activeMode = mode;
+
+  if (mode === 'translate') {
+    controlT.visible = true;  controlR.visible = false; controlS.visible = false;
+  } else if (mode === 'rotate') {
+    controlT.visible = false; controlR.visible = true;  controlS.visible = false;
+  } else if (mode === 'scale') {
+    controlT.visible = false; controlR.visible = false; controlS.visible = true;
+  } else if (mode === 'all') {
+    controlT.visible = true;  controlR.visible = true;  controlS.visible = true;
+  }
+
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-  const map = {translate:'btn-move', rotate:'btn-rot', scale:'btn-scale'};
-  document.getElementById(map[mode]).classList.add('active');
+  const map = {translate:'btn-move', rotate:'btn-rot', scale:'btn-scale', all:'btn-all'};
+  const id = map[mode];
+  if (id && document.getElementById(id)) document.getElementById(id).classList.add('active');
+
+  const label = (mode === 'all') ? 'Mover + Rotar + Escalar' :
+                (mode === 'translate') ? 'Mover' :
+                (mode === 'rotate') ? 'Rotar' : 'Escalar';
+  msg(label);
 }
 
 function del() {
-  if(control.object) {
-    const o = control.object;
-    control.detach();
+  if(controlT.object) {
+    const o = controlT.object;
+    detachGizmo();
     scene.remove(o);
     objects.splice(objects.indexOf(o), 1);
     msg("Eliminado");
@@ -376,7 +417,7 @@ function del() {
 }
 
 function randomColor() {
-  if(control.object) control.object.material.color.setHex(Math.random() * 0xffffff);
+  if(controlT.object) controlT.object.material.color.setHex(Math.random() * 0xffffff);
 }
 
 function msg(text) {
@@ -392,7 +433,10 @@ function createTechTexture() {
   ctx.fillStyle = '#f0f0f5'; ctx.fillRect(0,0,512,512);
   ctx.strokeStyle = '#d1d1d6'; ctx.lineWidth=2;
   ctx.beginPath();
-  for(let i=0;i<=512;i+=64){ ctx.moveTo(i,0); ctx.lineTo(i,512); ctx.moveTo(0,i); ctx.lineTo(512,i); }
+  for(let i=0;i<=512;i+=64){
+    ctx.moveTo(i,0); ctx.lineTo(i,512);
+    ctx.moveTo(0,i); ctx.lineTo(512,i);
+  }
   ctx.stroke();
   const t = new THREE.CanvasTexture(c);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
@@ -408,13 +452,9 @@ function onResize(){
 function animate() {
   requestAnimationFrame(animate);
   orbit.update();
-  
-  // Hack de visibilidad constante
   updateGizmoVisibility();
-  
   renderer.render(scene, camera);
 }
 </script>
 </body>
 </html>
-
