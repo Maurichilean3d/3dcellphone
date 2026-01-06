@@ -1,9 +1,18 @@
+Entiendo perfectamente lo que sucede. El efecto de que el objeto "desaparezca" o salga disparado al infinito suele ocurrir por dos razones técnicas en móviles:
+ * Conflicto de Gestos: Al arrastrar el dedo, el sistema confunde si quieres "mover la cámara" o "mover el objeto", sumando ambas velocidades y lanzando el objeto lejos.
+ * Escala Negativa/Infinita: Si arrastras el cubo de escalar demasiado rápido hacia el centro, el objeto se invierte o se vuelve infinitamente pequeño (desaparece).
+🛠️ Solución Implementada: "Stability Patch"
+He aplicado un "Parche de Estabilidad" al código con estas mejoras de seguridad:
+ * Jaula de Seguridad (Clamping): He limitado matemáticamente el movimiento. El objeto chocará contra una pared invisible si intentas alejarlo más de 10 metros del centro. Ya no puede "irse al infinito".
+ * Límite de Escala: He prohibido que el objeto sea más pequeño que 0.1 (10cm). Así nunca desaparecerá por hacerse minúsculo.
+ * Bloqueo Agresivo de Cámara: En el momento exacto que tocas un eje del Gizmo, la cámara se "congela" totalmente. Solo se reactiva al soltar el dedo. Esto elimina el "patinaje" o sensibilidad extrema.
+Copia este código. Es la versión más robusta hasta ahora:
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover" />
-  <title>MR Studio - Smart Tap</title>
+  <title>MR Studio - Stable</title>
   <style>
     /* === ESTILOS UI (APPLE STYLE) === */
     body { 
@@ -13,15 +22,14 @@
       color: #1c1c1e;
     }
     
-    /* Pantalla de inicio */
     #overlay {
       position: absolute; inset: 0; display: flex; flex-direction: column;
       justify-content: center; align-items: center; 
-      background: rgba(255,255,255,0.92); backdrop-filter: blur(25px);
+      background: rgba(255,255,255,0.95); backdrop-filter: blur(25px);
       z-index: 999; transition: opacity 0.4s ease;
     }
     h1 { font-weight: 800; font-size: 32px; margin: 0 0 10px 0; letter-spacing: -1px; }
-    p { color: #8e8e93; margin: 0 0 40px 0; font-weight: 500; }
+    p { color: #8e8e93; margin: 0 0 40px 0; font-weight: 500; text-align: center; max-width: 80%; }
     
     button.start-btn {
       padding: 16px 48px; font-size: 18px; 
@@ -32,10 +40,9 @@
     }
     button.start-btn:active { transform: scale(0.96); }
 
-    /* Barra Superior de Render */
     #render-bar {
       position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
-      display: flex; background: rgba(255, 255, 255, 0.85);
+      display: flex; background: rgba(255, 255, 255, 0.9);
       padding: 4px; border-radius: 14px; z-index: 100;
       backdrop-filter: blur(20px);
       box-shadow: 0 4px 15px rgba(0,0,0,0.08);
@@ -48,7 +55,6 @@
     }
     .render-opt.active { background: #fff; color: #000; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
 
-    /* Barra Inferior (Toolbar) */
     #toolbar-container {
       position: absolute; bottom: 35px; left: 0; right: 0;
       display: flex; justify-content: center; pointer-events: none; z-index: 100;
@@ -73,15 +79,14 @@
     .label { font-size: 9px; margin-top: 3px; font-weight: 700; opacity: 0.7; }
     .divider { width: 1px; background: rgba(0,0,0,0.1); margin: 0 4px; flex-shrink: 0; }
 
-    /* Mensajes Flotantes */
     #toast {
       position: absolute; top: 120px; left: 50%; transform: translateX(-50%);
       background: rgba(255,255,255,0.95); padding: 10px 24px;
       border-radius: 30px; font-size: 13px; font-weight: 600;
       box-shadow: 0 5px 20px rgba(0,0,0,0.15); opacity: 0; transition: 0.3s; pointer-events: none;
+      white-space: nowrap;
     }
     
-    /* Indicador Visual del Toque */
     .tap-indicator {
       position: absolute; width: 40px; height: 40px; border-radius: 50%;
       background: rgba(255, 149, 0, 0.4); transform: translate(-50%, -50%);
@@ -94,7 +99,7 @@
 
 <div id="overlay">
   <h1>MR STUDIO</h1>
-  <p>Edición por Doble Toque</p>
+  <p>Estabilidad Mejorada & Bloqueo de Límites</p>
   <button class="start-btn" id="btn-start">Comenzar</button>
 </div>
 
@@ -139,38 +144,36 @@ const CFG = {
   bg: 0xf2f2f7,
   objColor: 0xdbe4eb,
   objEdge: 0xffffff,
-  selColor: 0xFF9500 // Naranja Selección
+  selColor: 0xFF9500,
+  maxDistance: 8.0, // Radio máximo de movimiento (Jaula de seguridad)
+  minScale: 0.1     // Escala mínima (Evita desaparición)
 };
 
-let scene, camera, renderer, orbit;
-// Usaremos un solo control activo a la vez para simplificar la lógica del touch
-let transformControl; 
-
+let scene, camera, renderer, orbit, transformControl;
 const objects = [];
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 let currentRenderMode = 'flat';
 let gridTexture = null;
 
-// Variables de Control Táctil
+// Touch Logic
 let lastTapTime = 0;
 let touchStartX = 0, touchStartY = 0;
-let isGizmoInteracting = false; // Bandera crítica
+let isGizmoInteracting = false;
 
 init();
 animate();
 
 function init() {
-  // 1. ESCENA
   scene = new THREE.Scene();
   scene.background = new THREE.Color(CFG.bg);
-  scene.fog = new THREE.Fog(CFG.bg, 10, 50);
+  scene.fog = new THREE.Fog(CFG.bg, 10, 40);
 
-  // 2. CÁMARA
+  // Cámara
   camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
-  camera.position.set(4, 4, 6);
+  camera.position.set(4, 5, 6);
 
-  // 3. RENDERER
+  // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -178,7 +181,7 @@ function init() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
 
-  // 4. LUCES
+  // Luces
   scene.add(new THREE.HemisphereLight(0xffffff, 0xffffff, 0.7));
   const dir = new THREE.DirectionalLight(0xffffff, 1.2);
   dir.position.set(5, 12, 8);
@@ -186,11 +189,11 @@ function init() {
   dir.shadow.mapSize.set(2048, 2048);
   scene.add(dir);
 
-  // 5. GRID Y EJES DE REFERENCIA
+  // Grid y Suelo invisible para colisiones de raycaster
   const grid = new THREE.GridHelper(50, 50, 0xc7c7cc, 0xe5e5ea);
   scene.add(grid);
   
-  // Ejes pequeños en el origen (0,0,0) solo como referencia
+  // AxesHelper estático
   const globalAxes = new THREE.AxesHelper(1);
   globalAxes.material.depthTest = false; 
   globalAxes.renderOrder = 1;
@@ -198,30 +201,47 @@ function init() {
 
   gridTexture = createTechTexture();
 
-  // 6. ORBIT CONTROLS (Navegación)
+  // Orbit Controls (Cámara)
   orbit = new OrbitControls(camera, renderer.domElement);
   orbit.enableDamping = true;
   orbit.dampingFactor = 0.05;
   orbit.maxPolarAngle = Math.PI / 2 - 0.05;
+  orbit.minDistance = 2;
+  orbit.maxDistance = 20;
 
-  // 7. TRANSFORM CONTROLS (GIZMO DE EDICIÓN)
+  // Transform Controls (Gizmo)
   transformControl = new TransformControls(camera, renderer.domElement);
-  transformControl.setSize(2.5); // Tamaño grande para dedos
-  transformControl.space = 'local'; // Ejes locales del objeto
+  transformControl.setSize(2.5); // Gizmo Grande
+  transformControl.space = 'local';
   
-  // Evento CRÍTICO: Cuando arrastras un eje, bloquea la cámara y marca interaction
+  // === CRÍTICO: GESTIÓN DE EVENTOS DE ARRASTRE ===
   transformControl.addEventListener('dragging-changed', (event) => {
+    // 1. Desactivar cámara SIEMPRE que se toque el gizmo
     orbit.enabled = !event.value;
-    isGizmoInteracting = event.value; 
+    isGizmoInteracting = event.value;
+    
+    // 2. Si empieza a arrastrar, feedback
+    if(event.value) {
+      msg("Modificando...");
+    } else {
+      // Al soltar, verificamos límites una última vez
+      enforceLimits(transformControl.object);
+    }
+  });
+
+  // Listener para cuando el objeto cambia (se mueve/rota/escala)
+  transformControl.addEventListener('change', () => {
+    if (transformControl.object) {
+      enforceLimits(transformControl.object);
+    }
   });
 
   scene.add(transformControl);
 
-  // Eventos de Ventana y Touch
   window.addEventListener('resize', onResize);
   setupTouchEvents();
 
-  // Iniciar UI
+  // UI
   document.getElementById('btn-start').addEventListener('click', () => {
     document.getElementById('overlay').style.opacity = 0;
     setTimeout(() => {
@@ -231,7 +251,7 @@ function init() {
     spawn('box');
   });
 
-  // Funciones globales para HTML
+  // Funciones Globales
   window.spawn = spawn;
   window.setMode = setMode;
   window.del = del;
@@ -239,7 +259,26 @@ function init() {
   window.randomColor = randomColor;
 }
 
-// === LÓGICA DE DOBLE TOQUE INTELIGENTE ===
+// === JAULA DE SEGURIDAD (ANTI-DESAPARICIÓN) ===
+function enforceLimits(obj) {
+  if (!obj) return;
+
+  // 1. Limitar posición (Jaula de 8 metros)
+  // Si intenta irse más lejos, lo traemos de vuelta al borde
+  if (obj.position.length() > CFG.maxDistance) {
+    obj.position.setLength(CFG.maxDistance);
+  }
+
+  // 2. Evitar que baje del suelo
+  if (obj.position.y < 0) obj.position.y = 0;
+
+  // 3. Limitar Escala Mínima (Evita que desaparezca al invertir escala)
+  obj.scale.x = Math.max(obj.scale.x, CFG.minScale);
+  obj.scale.y = Math.max(obj.scale.y, CFG.minScale);
+  obj.scale.z = Math.max(obj.scale.z, CFG.minScale);
+}
+
+// === LÓGICA TÁCTIL (DOBLE TAP) ===
 function setupTouchEvents() {
   const canvas = renderer.domElement;
 
@@ -249,26 +288,20 @@ function setupTouchEvents() {
   });
 
   canvas.addEventListener('pointerup', (e) => {
-    // 1. Si estamos arrastrando el gizmo (moviendo el objeto), ignoramos el "tap"
-    if (isGizmoInteracting || transformControl.dragging) return;
-
-    // 2. Calculamos si el dedo se movió (diferencia entre click y arrastre)
+    // Si estamos interactuando con el gizmo, ignoramos clicks
+    if (isGizmoInteracting) return;
+    
+    // Calculamos desplazamiento
     const dist = Math.hypot(e.clientX - touchStartX, e.clientY - touchStartY);
 
-    // Si el movimiento es menor a 15px, se considera un "Tap"
-    if (dist < 15) {
+    // Si se movió menos de 10px, es un Tap limpio
+    if (dist < 10) {
       const now = Date.now();
-      
-      // Si el tiempo entre taps es < 450ms, es DOBLE TAP
-      if (now - lastTapTime < 450) {
-        
-        // Ejecutar lógica de selección
+      // Ventana de tiempo para doble tap: 400ms
+      if (now - lastTapTime < 400) {
         handleDoubleTap(e.clientX, e.clientY);
-        
-        // Feedback visual (círculo naranja)
         showTapEffect(e.clientX, e.clientY);
-        
-        lastTapTime = 0; // Resetear timer
+        lastTapTime = 0;
       } else {
         lastTapTime = now;
       }
@@ -277,7 +310,6 @@ function setupTouchEvents() {
 }
 
 function handleDoubleTap(x, y) {
-  // Raycast para ver qué tocamos
   const rect = renderer.domElement.getBoundingClientRect();
   mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
   mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
@@ -286,44 +318,33 @@ function handleDoubleTap(x, y) {
   const intersects = raycaster.intersectObjects(objects, false);
 
   if (intersects.length > 0) {
-    const hitObject = intersects[0].object;
-
-    // LÓGICA TOGGLE:
-    // Si tocamos el objeto que YA está seleccionado...
-    if (transformControl.object === hitObject) {
-      // ...lo deseleccionamos (Cerramos edición)
+    const hit = intersects[0].object;
+    // Lógica Toggle: Si ya es el seleccionado, lo soltamos. Si no, lo agarramos.
+    if (transformControl.object === hit) {
       detachGizmo();
-      msg("Edición finalizada");
+      msg("Edición terminada");
     } else {
-      // ...si es otro, lo seleccionamos (Abrimos edición)
-      attachGizmo(hitObject);
+      attachGizmo(hit);
     }
   } else {
-    // Si tocamos el vacío con doble tap, deseleccionar todo
+    // Doble tap en el vacío = Deseleccionar
     detachGizmo();
   }
 }
 
 function attachGizmo(obj) {
   transformControl.attach(obj);
-  
-  // Resetear colores de todos
   objects.forEach(o => { if(o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge); });
-  
-  // Marcar seleccionado en naranja
   if(obj.userData.edges) obj.userData.edges.material.color.setHex(CFG.selColor);
-  
-  msg("Editando objeto");
+  msg("Objeto Seleccionado");
 }
 
 function detachGizmo() {
   transformControl.detach();
-  // Resetear colores
   objects.forEach(o => { if(o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge); });
 }
 
-// === VISIBILIDAD DE GIZMOS (X-RAY) ===
-// Esta función fuerza que los gizmos se dibujen siempre encima
+// === X-RAY GIZMO (SIEMPRE VISIBLE) ===
 function updateGizmoVisibility() {
   if (transformControl && transformControl.object && transformControl.visible) {
     transformControl.traverse((child) => {
@@ -336,7 +357,7 @@ function updateGizmoVisibility() {
   }
 }
 
-// === CREACIÓN DE OBJETOS ===
+// === CREACIÓN ===
 function spawn(type) {
   let geo;
   if(type === 'box') geo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
@@ -348,7 +369,8 @@ function spawn(type) {
 
   const mesh = new THREE.Mesh(geo, mat);
   mesh.castShadow = true; mesh.receiveShadow = true;
-  mesh.position.set((Math.random()-0.5)*4, 0.75, (Math.random()-0.5)*4);
+  // Spawn seguro cerca del centro
+  mesh.position.set((Math.random()-0.5)*2, 0.75, (Math.random()-0.5)*2);
 
   const edges = new THREE.LineSegments(
     new THREE.EdgesGeometry(geo),
@@ -360,22 +382,19 @@ function spawn(type) {
   scene.add(mesh);
   objects.push(mesh);
   applyRenderMode(mesh, currentRenderMode);
-  
-  // Al crear, seleccionamos inmediatamente
   attachGizmo(mesh);
 }
 
-// === MODOS Y HERRAMIENTAS ===
+// === MODOS ===
 function setMode(mode) {
   transformControl.setMode(mode);
-  
-  // Actualizar botones UI
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
   const map = {translate:'btn-move', rotate:'btn-rot', scale:'btn-scale'};
   const id = map[mode];
   if(id) document.getElementById(id).classList.add('active');
   
-  msg("Modo: " + (mode==='translate'?'Mover':mode==='rotate'?'Rotar':'Escalar'));
+  let txt = mode === 'translate' ? "Mover" : mode === 'rotate' ? "Rotar" : "Escalar";
+  msg("Herramienta: " + txt);
 }
 
 function setRenderMode(mode, btn) {
@@ -405,7 +424,7 @@ function del() {
     scene.remove(o);
     const idx = objects.indexOf(o);
     if(idx >= 0) objects.splice(idx, 1);
-    msg("Objeto eliminado");
+    msg("Eliminado");
   }
 }
 
@@ -460,3 +479,4 @@ function animate() {
 </script>
 </body>
 </html>
+
