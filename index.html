@@ -5,333 +5,262 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover" />
   <title>MR Studio Complete</title>
   <style>
-    :root {
-      --bg-primary: #f2f2f7;
-      --bg-secondary: #ffffff;
-      --text-primary: #1c1c1e;
-      --text-secondary: #8e8e93;
-      --border-color: rgba(255,255,255,0.4);
-      --shadow-color: rgba(0,0,0,0.15);
+    :root{
+      --bg-primary:#f2f2f7; --bg-secondary:#ffffff;
+      --text-primary:#1c1c1e; --text-secondary:#8e8e93;
+      --border-color:rgba(255,255,255,0.4); --shadow-color:rgba(0,0,0,0.15);
+    }
+    body.dark-mode{
+      --bg-primary:#1c1c1e; --bg-secondary:#2c2c2e;
+      --text-primary:#ffffff; --text-secondary:#98989d;
+      --border-color:rgba(255,255,255,0.1); --shadow-color:rgba(0,0,0,0.5);
+    }
+    body{
+      margin:0; background:var(--bg-primary); overflow:hidden;
+      font-family:-apple-system,"SF Pro Text",sans-serif;
+      -webkit-user-select:none; user-select:none; touch-action:none;
+      color:var(--text-primary); transition:background .3s ease;
     }
 
-    body.dark-mode {
-      --bg-primary: #1c1c1e;
-      --bg-secondary: #2c2c2e;
-      --text-primary: #ffffff;
-      --text-secondary: #98989d;
-      --border-color: rgba(255,255,255,0.1);
-      --shadow-color: rgba(0,0,0,0.5);
+    /* Overlay */
+    #overlay{
+      position:absolute; inset:0; display:flex; flex-direction:column;
+      justify-content:center; align-items:center;
+      background:rgba(255,255,255,.95); backdrop-filter:blur(25px);
+      z-index:999; transition:opacity .4s ease;
+    }
+    body.dark-mode #overlay{ background:rgba(28,28,30,.95); }
+    h1{ font-weight:900; font-size:32px; margin:0 0 10px 0; letter-spacing:-1px; }
+    p{ color:var(--text-secondary); margin:0 0 30px 0; font-weight:600; text-align:center; max-width:80%; }
+
+    /* Theme selector */
+    #theme-selector{ display:flex; gap:12px; margin-bottom:40px; }
+    .theme-option{
+      padding:12px 24px; border:2px solid #e5e5ea; border-radius:16px;
+      background:#fff; cursor:pointer; font-weight:700; font-size:14px;
+      transition:.2s; display:flex; align-items:center; gap:8px;
+    }
+    .theme-option.active{ border-color:#FF9500; background:#FF9500; color:#fff; }
+    .theme-option:active{ transform:scale(.96); }
+    .theme-icon{ font-size:18px; }
+
+    button.start-btn{
+      padding:16px 48px; font-size:18px; background:#FF9500; border:none;
+      border-radius:40px; color:#fff; font-weight:800;
+      box-shadow:0 8px 25px rgba(255,149,0,.35);
+      cursor:pointer; transition:.2s;
+    }
+    button.start-btn:active{ transform:scale(.96); }
+
+    /* Bars */
+    #render-bar, #camera-bar{
+      position:absolute; left:50%; transform:translateX(-50%);
+      display:flex; background:rgba(255,255,255,.9);
+      padding:4px; border-radius:14px; z-index:100;
+      backdrop-filter:blur(20px); border:1px solid rgba(255,255,255,.4);
+      box-shadow:0 4px 15px rgba(0,0,0,.08); gap:4px;
+      max-width:92%; overflow-x:auto; -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+    }
+    #render-bar{ top:50px; }
+    #camera-bar{ top:110px; }
+    #render-bar::-webkit-scrollbar, #camera-bar::-webkit-scrollbar{ display:none; }
+
+    .render-opt, .cam-opt{
+      padding:8px 16px; font-size:12px; font-weight:900;
+      border-radius:10px; border:none; background:transparent;
+      color:#999; transition:.2s; cursor:pointer; white-space:nowrap;
+    }
+    .render-opt.active, .cam-opt.active{ background:#fff; color:#000; box-shadow:0 2px 8px rgba(0,0,0,.15); }
+
+    /* Exit */
+    #exit-manipulation{
+      position:absolute; top:50px; right:20px; width:44px; height:44px;
+      background:rgba(255,59,48,.95); border:none; border-radius:22px;
+      color:#fff; font-size:24px; font-weight:900; display:none;
+      align-items:center; justify-content:center;
+      box-shadow:0 4px 15px rgba(255,59,48,.4);
+      cursor:pointer; z-index:150; transition:.2s;
+      pointer-events:auto;
+    }
+    #exit-manipulation.visible{ display:flex; }
+    #exit-manipulation:active{ transform:scale(.9); }
+
+    /* Global/Local */
+    #space-toggle{
+      position:absolute; top:170px; left:50%; transform:translateX(-50%);
+      padding:10px 18px; background:rgba(255,255,255,.95);
+      border:2px solid #FF9500; border-radius:20px; color:#1c1c1e;
+      font-size:13px; font-weight:900; display:none; align-items:center;
+      gap:6px; box-shadow:0 4px 15px rgba(255,149,0,.3);
+      cursor:pointer; z-index:150; transition:.2s; backdrop-filter:blur(10px);
+      pointer-events:auto;
+    }
+    #space-toggle.visible{ display:flex; }
+    #space-toggle:active{ transform:translateX(-50%) scale(.96); }
+    #space-toggle.local{ background:rgba(52,199,89,.95); border-color:#34C759; color:#fff; }
+    #space-icon{ font-size:16px; }
+
+    /* Edit values */
+    #edit-values-btn{
+      position:absolute; width:56px; height:56px; background:rgba(255,149,0,.95);
+      border:3px solid #fff; border-radius:28px; color:#fff; font-size:26px;
+      font-weight:900; display:none; align-items:center; justify-content:center;
+      box-shadow:0 8px 25px rgba(255,149,0,.5); cursor:pointer; z-index:200;
+      transition:.2s; pointer-events:auto;
+    }
+    #edit-values-btn.visible{ display:flex; }
+    #edit-values-btn:active{ transform:scale(.9); }
+    body.dark-mode #edit-values-btn{ border-color:rgba(255,255,255,.3); }
+
+    /* Toolbar */
+    #toolbar-container{ position:absolute; bottom:35px; left:0; right:0; display:flex; justify-content:center; pointer-events:none; z-index:100; }
+    #toolbar{
+      pointer-events:auto; display:flex; gap:12px; padding:12px 16px;
+      background:rgba(255,255,255,.9); backdrop-filter:blur(30px);
+      border-radius:28px; border:1px solid rgba(255,255,255,.5);
+      box-shadow:0 15px 40px rgba(0,0,0,.15);
+      max-width:94%; overflow-x:auto; -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+    }
+    #toolbar::-webkit-scrollbar{ display:none; }
+    .tool-btn{
+      flex-shrink:0; width:56px; height:56px; border-radius:18px; border:none;
+      background:rgba(235,235,240,.6); color:#1c1c1e; font-size:26px;
+      display:flex; flex-direction:column; align-items:center; justify-content:center;
+      transition:.2s; cursor:pointer;
+    }
+    .tool-btn.active{ background:#FF9500; color:#fff; box-shadow:0 6px 15px rgba(255,149,0,.3); }
+    .btn-delete{ color:#FF3B30; }
+    .label{ font-size:9px; margin-top:3px; font-weight:900; opacity:.7; }
+    .divider{ width:1px; background:rgba(0,0,0,.1); margin:0 4px; flex-shrink:0; }
+
+    /* Sub-toolbar (thin carousel) */
+    #subtoolbar-container{
+      position:absolute; bottom:112px; left:0; right:0;
+      display:flex; justify-content:center; pointer-events:none; z-index:120;
+    }
+    #subtoolbar{
+      pointer-events:auto; display:none; gap:10px; padding:8px 12px;
+      background:rgba(255,255,255,.86); backdrop-filter:blur(26px);
+      border-radius:22px; border:1px solid rgba(255,255,255,.45);
+      box-shadow:0 12px 30px rgba(0,0,0,.12);
+      max-width:92%; overflow-x:auto; -webkit-overflow-scrolling:touch;
+      scrollbar-width:none;
+    }
+    #subtoolbar.visible{ display:flex; }
+    #subtoolbar::-webkit-scrollbar{ display:none; }
+    .sub-btn{
+      flex-shrink:0; height:38px; padding:0 14px; border-radius:14px;
+      border:none; background:rgba(235,235,240,.6);
+      font-weight:900; font-size:12px; cursor:pointer; transition:.2s;
+      display:flex; align-items:center; gap:8px;
+    }
+    .sub-btn.active{ background:#FF9500; color:#fff; box-shadow:0 6px 15px rgba(255,149,0,.22); }
+    .pill{
+      width:18px; height:18px; border-radius:6px; background:rgba(0,0,0,.08);
+      display:inline-flex; align-items:center; justify-content:center;
+      font-size:12px; font-weight:900;
     }
 
-    body {
-      margin: 0;
-      background: var(--bg-primary);
-      overflow: hidden;
-      font-family: -apple-system, "SF Pro Text", sans-serif;
-      -webkit-user-select: none; user-select: none; touch-action: none;
-      color: var(--text-primary);
-      transition: background 0.3s ease;
+    /* Measurement */
+    #measurement-line{ position:absolute; pointer-events:none; opacity:0; transition:opacity .2s; z-index:150; }
+    #measurement-line.visible{ opacity:1; }
+    #distance-label{
+      position:absolute; background:rgba(0,0,0,.9); color:#fff; padding:8px 16px;
+      border-radius:16px; font-size:14px; font-weight:900;
+      font-family:'SF Mono','Monaco',monospace;
+      box-shadow:0 4px 15px rgba(0,0,0,.3);
+      pointer-events:auto; opacity:0; transition:opacity .2s; z-index:200;
+      cursor:pointer; white-space:nowrap;
     }
+    #distance-label.visible{ opacity:1; }
 
-    #overlay {
-      position: absolute; inset: 0; display: flex; flex-direction: column;
-      justify-content: center; align-items: center;
-      background: rgba(255,255,255,0.95); backdrop-filter: blur(25px);
-      z-index: 999; transition: opacity 0.4s ease;
+    /* Confirm mini */
+    #confirm-dialog{
+      position:absolute; bottom:150px; left:50%; transform:translateX(-50%);
+      background:rgba(255,255,255,.98); backdrop-filter:blur(20px);
+      padding:10px; border-radius:22px; box-shadow:0 20px 60px rgba(0,0,0,.25);
+      z-index:300; display:none; gap:10px; align-items:center;
     }
-    body.dark-mode #overlay { background: rgba(28, 28, 30, 0.95); }
-
-    h1 { font-weight: 800; font-size: 32px; margin: 0 0 10px 0; letter-spacing: -1px; }
-    p { color: var(--text-secondary); margin: 0 0 30px 0; font-weight: 500; text-align: center; max-width: 80%; }
-
-    #theme-selector { display:flex; gap:12px; margin-bottom: 40px; }
-    .theme-option {
-      padding: 12px 24px; border: 2px solid #e5e5ea; border-radius: 16px;
-      background: white; cursor: pointer; font-weight: 600; font-size: 14px;
-      transition: 0.2s; display:flex; align-items:center; gap:8px;
-    }
-    .theme-option.active { border-color:#FF9500; background:#FF9500; color:white; }
-    .theme-option:active { transform: scale(0.96); }
-    .theme-icon { font-size:18px; }
-
-    button.start-btn {
-      padding: 16px 48px; font-size: 18px;
-      background: #FF9500; border: none; border-radius: 40px;
-      color: white; font-weight: 700;
-      box-shadow: 0 8px 25px rgba(255, 149, 0, 0.35);
-      cursor: pointer; transform: scale(1); transition: 0.2s;
-    }
-    button.start-btn:active { transform: scale(0.96); }
-
-    /* === BARRA RENDER === */
-    #render-bar {
-      position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
-      display: flex; background: rgba(255, 255, 255, 0.9);
-      padding: 4px; border-radius: 14px; z-index: 100;
-      backdrop-filter: blur(20px);
-      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-      border: 1px solid rgba(255,255,255,0.4);
-      gap: 4px;
-    }
-    .render-opt {
-      padding: 8px 18px; font-size: 13px; font-weight: 700;
-      border-radius: 10px; border: none; background: transparent;
-      color: #999; transition: 0.2s;
-      cursor: pointer;
-    }
-    .render-opt.active { background: #fff; color: #000; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-
-    /* === BARRA CÁMARA === */
-    #camera-bar {
-      position: absolute; top: 110px; left: 50%; transform: translateX(-50%);
-      display: flex; background: rgba(255, 255, 255, 0.9);
-      padding: 4px; border-radius: 14px; z-index: 100;
-      backdrop-filter: blur(20px);
-      box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-      border: 1px solid rgba(255,255,255,0.4);
-      gap: 4px;
-      max-width: 92%;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-    #camera-bar::-webkit-scrollbar { display: none; }
-    .cam-opt {
-      padding: 8px 14px; font-size: 12px; font-weight: 800;
-      border-radius: 10px; border: none; background: transparent;
-      color: #999; transition: 0.2s;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .cam-opt.active { background: #fff; color:#000; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-
-    /* === BOTÓN X SALIR === */
-    #exit-manipulation {
-      position: absolute;
-      top: 50px;
-      right: 20px;
-      width: 44px;
-      height: 44px;
-      background: rgba(255, 59, 48, 0.95);
-      border: none;
-      border-radius: 22px;
-      color: white;
-      font-size: 24px;
-      font-weight: 800;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 4px 15px rgba(255, 59, 48, 0.4);
-      cursor: pointer;
-      z-index: 150;
-      transition: 0.2s;
-      pointer-events: auto;
-    }
-    #exit-manipulation.visible { display:flex; }
-    #exit-manipulation:active { transform: scale(0.9); }
-
-    /* === BOTÓN GLOBAL/LOCAL === */
-    #space-toggle {
-      position: absolute;
-      top: 170px;
-      left: 50%;
-      transform: translateX(-50%);
-      padding: 10px 18px;
-      background: rgba(255, 255, 255, 0.95);
-      border: 2px solid #FF9500;
-      border-radius: 20px;
-      color: #1c1c1e;
-      font-size: 13px;
-      font-weight: 800;
-      display: none;
-      align-items: center;
-      gap: 6px;
-      box-shadow: 0 4px 15px rgba(255, 149, 0, 0.3);
-      cursor: pointer;
-      z-index: 150;
-      transition: 0.2s;
-      backdrop-filter: blur(10px);
-      pointer-events: auto;
-    }
-    #space-toggle.visible { display:flex; }
-    #space-toggle:active { transform: translateX(-50%) scale(0.96); }
-    #space-toggle.local {
-      background: rgba(52, 199, 89, 0.95);
-      border-color: #34C759;
-      color: white;
-    }
-    #space-icon { font-size: 16px; }
-
-    /* === BOTÓN FLOTANTE DE EDICIÓN === */
-    #edit-values-btn {
-      position: absolute;
-      width: 56px;
-      height: 56px;
-      background: rgba(255, 149, 0, 0.95);
-      border: 3px solid white;
-      border-radius: 28px;
-      color: white;
-      font-size: 26px;
-      font-weight: 900;
-      display: none;
-      align-items: center;
-      justify-content: center;
-      box-shadow: 0 8px 25px rgba(255, 149, 0, 0.5);
-      cursor: pointer;
-      z-index: 200;
-      transition: 0.2s;
-      pointer-events: auto;
-    }
-    #edit-values-btn.visible { display:flex; }
-    #edit-values-btn:active { transform: scale(0.9); }
-    body.dark-mode #edit-values-btn { border-color: rgba(255, 255, 255, 0.3); }
-
-    /* === TOOLBAR === */
-    #toolbar-container {
-      position: absolute; bottom: 35px; left: 0; right: 0;
-      display: flex; justify-content: center; pointer-events: none; z-index: 100;
-    }
-    #toolbar {
-      pointer-events: auto; display: flex; gap: 12px; padding: 12px 16px;
-      background: rgba(255, 255, 255, 0.9);
-      backdrop-filter: blur(30px);
-      border-radius: 28px; border: 1px solid rgba(255,255,255,0.5);
-      box-shadow: 0 15px 40px rgba(0,0,0,0.15);
-      max-width: 92%; overflow-x: auto; scroll-behavior: smooth;
-      -webkit-overflow-scrolling: touch; scrollbar-width: none;
-    }
-    #toolbar::-webkit-scrollbar { display:none; }
-    .tool-btn {
-      flex-shrink: 0; width: 56px; height: 56px; border-radius: 18px; border: none;
-      background: rgba(235, 235, 240, 0.6); color: #1c1c1e; font-size: 26px;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      transition: 0.2s; cursor: pointer;
-    }
-    .tool-btn.active { background: #FF9500; color: white; box-shadow: 0 6px 15px rgba(255, 149, 0, 0.3); }
-    .btn-delete { color: #FF3B30; }
-    .label { font-size: 9px; margin-top: 3px; font-weight: 800; opacity: 0.7; }
-    .divider { width: 1px; background: rgba(0,0,0,0.1); margin: 0 4px; flex-shrink: 0; }
-
-    /* === SISTEMA DE MEDICIÓN === */
-    #measurement-line { position: absolute; pointer-events: none; opacity: 0; transition: opacity 0.2s; z-index: 150; }
-    #measurement-line.visible { opacity: 1; }
-
-    #distance-label {
-      position: absolute;
-      background: rgba(0, 0, 0, 0.9);
-      color: white;
-      padding: 8px 16px;
-      border-radius: 16px;
-      font-size: 14px;
-      font-weight: 800;
-      font-family: 'SF Mono', 'Monaco', monospace;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-      pointer-events: auto;
-      opacity: 0;
-      transition: opacity 0.2s;
-      z-index: 200;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    #distance-label.visible { opacity: 1; }
-    #distance-label:active { background: rgba(255, 149, 0, 0.9); }
-
-    /* === CONFIRM MINI (✕ / ✓) === */
-    #confirm-dialog {
-      position: absolute;
-      bottom: 150px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(255, 255, 255, 0.98);
-      backdrop-filter: blur(20px);
-      padding: 10px;
-      border-radius: 22px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
-      z-index: 300;
-      display: none;
-      gap: 10px;
-      align-items: center;
-    }
-    #confirm-dialog.visible { display: flex; }
-
+    #confirm-dialog.visible{ display:flex; }
     .mini-btn{
-      width: 56px; height: 56px;
-      border-radius: 18px;
-      border:none;
-      font-size: 26px;
-      font-weight: 900;
-      cursor:pointer;
-      transition:0.2s;
-      color: #fff;
+      width:56px; height:56px; border-radius:18px; border:none; font-size:26px;
+      font-weight:900; cursor:pointer; transition:.2s; color:#fff;
     }
-    .mini-btn:active{ transform:scale(0.94); }
-    .mini-btn.cancel{ background: rgba(255,59,48,0.95); }
-    .mini-btn.ok{ background: rgba(52,199,89,0.95); }
+    .mini-btn:active{ transform:scale(.94); }
+    .mini-btn.cancel{ background:rgba(255,59,48,.95); }
+    .mini-btn.ok{ background:rgba(52,199,89,.95); }
 
-    /* === INPUT TRIPLE (X, Y, Z) === */
-    #axis-input-dialog {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(255, 255, 255, 0.98);
-      backdrop-filter: blur(20px);
-      padding: 28px;
-      border-radius: 24px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-      z-index: 500;
-      display: none;
-      min-width: 340px;
-      pointer-events: auto;
+    /* Axis input dialog */
+    #axis-input-dialog{
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      background:rgba(255,255,255,.98); backdrop-filter:blur(20px);
+      padding:28px; border-radius:24px; box-shadow:0 20px 60px rgba(0,0,0,.3);
+      z-index:500; display:none; min-width:340px; pointer-events:auto;
     }
-    #axis-input-dialog.visible { display:block !important; }
-    body.dark-mode #axis-input-dialog { background: rgba(44, 44, 46, 0.98); }
+    #axis-input-dialog.visible{ display:block !important; }
+    body.dark-mode #axis-input-dialog{ background:rgba(44,44,46,.98); }
     body.dark-mode #axis-input-dialog h3,
-    body.dark-mode #axis-input-dialog .axis-name { color: var(--text-primary); }
-    body.dark-mode .axis-input-field {
-      background: rgba(28, 28, 30, 0.6);
-      border-color: rgba(255, 255, 255, 0.2);
-      color: white;
+    body.dark-mode #axis-input-dialog .axis-name{ color:var(--text-primary); }
+    body.dark-mode .axis-input-field{
+      background:rgba(28,28,30,.6); border-color:rgba(255,255,255,.2); color:#fff;
     }
-    body.dark-mode .axis-input-field:focus { border-color: #FF9500; }
-
-    #axis-input-dialog h3 { margin: 0 0 8px 0; font-size: 20px; font-weight: 900; text-align:center; }
-    #axis-input-dialog .axis-name { text-align:center; font-size: 13px; color: #8e8e93; margin-bottom: 20px; font-weight: 700; }
-
-    .input-row { display:flex; align-items:center; gap:12px; margin-bottom: 12px; }
-    .input-label {
-      width: 30px; height: 30px; border-radius: 8px;
-      display:flex; align-items:center; justify-content:center;
-      font-weight: 900; font-size: 16px; color: white; flex-shrink: 0;
+    body.dark-mode .axis-input-field:focus{ border-color:#FF9500; }
+    #axis-input-dialog h3{ margin:0 0 8px 0; font-size:20px; font-weight:900; text-align:center; }
+    #axis-input-dialog .axis-name{ text-align:center; font-size:13px; color:#8e8e93; margin-bottom:20px; font-weight:800; }
+    .input-row{ display:flex; align-items:center; gap:12px; margin-bottom:12px; }
+    .input-label{ width:30px; height:30px; border-radius:8px; display:flex; align-items:center; justify-content:center; font-weight:900; font-size:16px; color:#fff; flex-shrink:0; }
+    .input-label.x{ background:#FF3B30; } .input-label.y{ background:#34C759; } .input-label.z{ background:#007AFF; }
+    .axis-input-field{
+      flex:1; padding:16px; font-size:22px; font-weight:900; text-align:center;
+      border:2px solid #e5e5ea; border-radius:12px;
+      font-family:'SF Mono','Monaco',monospace; transition:.2s; min-width:120px;
     }
-    .input-label.x { background:#FF3B30; }
-    .input-label.y { background:#34C759; }
-    .input-label.z { background:#007AFF; }
+    .axis-input-field:focus{ border-color:#FF9500; outline:none; }
+    #axis-input-dialog .buttons{ display:flex; gap:12px; margin-top:20px; }
+    #axis-input-dialog button{ flex:1; padding:16px; border:none; border-radius:14px; font-weight:900; font-size:16px; cursor:pointer; transition:.2s; color:#fff; }
+    #axis-input-dialog .btn-apply{ background:#34C759; } #axis-input-dialog .btn-cancel{ background:#FF3B30; }
+    #axis-input-dialog button:active{ transform:scale(.96); }
 
-    .axis-input-field {
-      flex: 1; padding: 16px; font-size: 22px; font-weight: 800;
-      text-align: center; border: 2px solid #e5e5ea; border-radius: 12px;
-      font-family: 'SF Mono', 'Monaco', monospace; transition: 0.2s;
-      min-width: 120px;
+    /* Color picker dialog */
+    #color-dialog{
+      position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
+      background:rgba(255,255,255,.98); backdrop-filter:blur(20px);
+      padding:22px; border-radius:22px; box-shadow:0 20px 60px rgba(0,0,0,.28);
+      z-index:520; display:none; min-width:340px; pointer-events:auto;
     }
-    .axis-input-field:focus { border-color:#FF9500; outline:none; }
+    #color-dialog.visible{ display:block; }
+    body.dark-mode #color-dialog{ background:rgba(44,44,46,.98); }
+    #color-dialog h3{ margin:0 0 12px 0; font-size:18px; font-weight:900; text-align:center; }
+    #color-dialog .row{ display:flex; gap:10px; align-items:center; margin-bottom:10px; }
+    #color-dialog label{ width:26px; font-weight:900; color:var(--text-secondary); }
+    #color-dialog input[type="number"]{
+      flex:1; padding:12px; font-size:16px; font-weight:900; text-align:center;
+      border:2px solid #e5e5ea; border-radius:12px; font-family:'SF Mono','Monaco',monospace;
+    }
+    body.dark-mode #color-dialog input[type="number"]{
+      background:rgba(28,28,30,.6); border-color:rgba(255,255,255,.2); color:#fff;
+    }
+    #color-dialog input[type="color"]{
+      width:56px; height:44px; border:none; background:transparent; padding:0;
+    }
+    #color-dialog .buttons{ display:flex; gap:12px; margin-top:14px; }
+    #color-dialog .btn-apply{ background:#34C759; color:#fff; }
+    #color-dialog .btn-cancel{ background:#FF3B30; color:#fff; }
+    #color-dialog button{
+      flex:1; padding:14px; border:none; border-radius:14px; font-weight:900; font-size:15px;
+      cursor:pointer; transition:.2s;
+    }
+    #color-dialog button:active{ transform:scale(.96); }
 
-    #axis-input-dialog .buttons { display:flex; gap:12px; margin-top: 20px; }
-    #axis-input-dialog button {
-      flex: 1; padding: 16px; border: none; border-radius: 14px;
-      font-weight: 800; font-size: 16px; cursor: pointer; transition: 0.2s;
-      color: #fff;
+    /* Tap indicator */
+    .tap-indicator{
+      position:absolute; width:40px; height:40px; border-radius:50%;
+      background:rgba(255,149,0,.4); transform:translate(-50%,-50%);
+      pointer-events:none; animation:pop .4s ease-out forwards; z-index:9999;
     }
-    #axis-input-dialog .btn-apply { background:#34C759; }
-    #axis-input-dialog .btn-cancel { background:#FF3B30; }
-    #axis-input-dialog button:active { transform: scale(0.96); }
-
-    .tap-indicator {
-      position: absolute; width: 40px; height: 40px; border-radius: 50%;
-      background: rgba(255, 149, 0, 0.4); transform: translate(-50%, -50%);
-      pointer-events: none; animation: pop 0.4s ease-out forwards; z-index: 9999;
-    }
-    @keyframes pop { to { transform: translate(-50%, -50%) scale(1.5); opacity: 0; } }
+    @keyframes pop{ to{ transform:translate(-50%,-50%) scale(1.5); opacity:0; } }
   </style>
 </head>
 <body>
@@ -404,12 +333,10 @@
     <div class="input-label x">X</div>
     <input type="number" class="axis-input-field" id="input-x" step="0.1" value="0.00" />
   </div>
-
   <div class="input-row">
     <div class="input-label y">Y</div>
     <input type="number" class="axis-input-field" id="input-y" step="0.1" value="0.00" />
   </div>
-
   <div class="input-row">
     <div class="input-label z">Z</div>
     <input type="number" class="axis-input-field" id="input-z" step="0.1" value="0.00" />
@@ -418,6 +345,48 @@
   <div class="buttons">
     <button class="btn-apply" onclick="applyAxisValue()">✓ Aplicar</button>
     <button class="btn-cancel" onclick="closeAxisDialog()">✕ Cancelar</button>
+  </div>
+</div>
+
+<div id="color-dialog">
+  <h3>Color Preciso</h3>
+  <div class="row">
+    <label>🎨</label>
+    <input type="color" id="pick-hex" />
+    <div style="flex:1; font-weight:900; color:var(--text-secondary); font-size:12px;">RGB + Alpha</div>
+  </div>
+  <div class="row">
+    <label>R</label><input type="number" id="pick-r" min="0" max="255" step="1" />
+  </div>
+  <div class="row">
+    <label>G</label><input type="number" id="pick-g" min="0" max="255" step="1" />
+  </div>
+  <div class="row">
+    <label>B</label><input type="number" id="pick-b" min="0" max="255" step="1" />
+  </div>
+  <div class="row">
+    <label>A</label><input type="number" id="pick-a" min="0" max="1" step="0.01" />
+  </div>
+  <div class="buttons">
+    <button class="btn-apply" onclick="applyColor()">✓ Aplicar</button>
+    <button class="btn-cancel" onclick="closeColorDialog()">✕ Cancelar</button>
+  </div>
+</div>
+
+<div id="subtoolbar-container">
+  <div id="subtoolbar">
+    <button class="sub-btn" id="sub-multi" onclick="toggleMultiSelect()">
+      <span class="pill">⊕</span> Multi
+    </button>
+    <button class="sub-btn" id="sub-verts" onclick="toggleSubMode('verts')">
+      <span class="pill">V</span> Vértices
+    </button>
+    <button class="sub-btn" id="sub-edges" onclick="toggleSubMode('edges')">
+      <span class="pill">E</span> Bordes
+    </button>
+    <button class="sub-btn" id="sub-faces" onclick="toggleSubMode('faces')">
+      <span class="pill">F</span> Caras
+    </button>
   </div>
 </div>
 
@@ -431,6 +400,8 @@
     <button class="tool-btn" onclick="spawn('torus')">🍩<span class="label">Toro</span></button>
     <button class="tool-btn" onclick="spawn('capsule')">💊<span class="label">Caps</span></button>
     <button class="tool-btn" onclick="spawn('prism6')">⬡<span class="label">Hex</span></button>
+    <button class="tool-btn" onclick="spawn('plane')">🟦<span class="label">Plano</span></button>
+    <button class="tool-btn" onclick="spawn('disc')">⭕<span class="label">Disco</span></button>
 
     <div class="divider"></div>
 
@@ -442,7 +413,8 @@
     <div class="divider"></div>
 
     <button class="tool-btn btn-delete" onclick="del()">🗑️<span class="label">Borrar</span></button>
-    <button class="tool-btn" onclick="randomColor()">🎨<span class="label">Color</span></button>
+    <button class="tool-btn" onclick="openColorDialog()">🧪<span class="label">Pick</span></button>
+    <button class="tool-btn" onclick="randomColor()">🎲<span class="label">Rand</span></button>
   </div>
 </div>
 
@@ -459,7 +431,6 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-// === CONFIGURACIÓN ===
 const CFG = {
   bg: 0xf2f2f7,
   objColor: 0xdbe4eb,
@@ -470,7 +441,6 @@ const CFG = {
   minScale: 0.05,
   maxScale: 10.0,
   arrowSize: 2.5,
-  movementSpeed: 0.08,
   zoomSensitivity: 0.15,
   minZoom: 2,
   maxZoom: 80
@@ -478,7 +448,7 @@ const CFG = {
 
 let scene, camera, renderer, orbit;
 
-// 4-View cameras
+// Quad-view cameras
 let camTop, camFront, camRight;
 let enableQuadView = false;
 
@@ -488,37 +458,46 @@ const mouse = new THREE.Vector2();
 let currentRenderMode = 'flat';
 let gridTexture = null;
 
-// Sistema de Gizmos
-let currentGizmo = null;
-let selectedObject = null;
-let activeHandle = null;
-let currentMode = 'translate'; // translate, rotate, scale
-let currentSpace = 'world'; // world (global) o local
+// Selection system
+let selectedObject = null;          // active object (drives gizmo)
+let selectedObjects = [];           // multi selection set (optional)
+let multiSelectEnabled = false;
 
-// Touch Logic
+let currentGizmo = null;
+let activeHandle = null;
+let currentMode = 'translate';
+let currentSpace = 'world';
+
+// Touch
 let lastTapTime = 0;
 let touchStartX = 0, touchStartY = 0;
 let isDragging = false;
 let dragStartPos = new THREE.Vector2();
 
-// Sistema de Medición
+// Measurement/UI
 let originPosition = new THREE.Vector3();
 let originRotation = new THREE.Euler();
 let originScale = new THREE.Vector3();
 let currentDistance = 0;
+
 const measurementLine = document.getElementById('measurement-line');
 const distanceLabel = document.getElementById('distance-label');
 const confirmDialog = document.getElementById('confirm-dialog');
 const axisInputDialog = document.getElementById('axis-input-dialog');
+const colorDialog = document.getElementById('color-dialog');
 const exitButton = document.getElementById('exit-manipulation');
 const spaceToggle = document.getElementById('space-toggle');
 const editValuesBtn = document.getElementById('edit-values-btn');
+const subtoolbar = document.getElementById('subtoolbar');
 
-// Zoom Inteligente
+// Sub-selection visual toggles
+let showVerts = false;
+let showEdges = true;
+let showFacesWire = false;
+
+// Smart zoom
 let initialCameraDistance = 0;
 let maxDragDistance = 0;
-
-// Estado de manipulación
 let manipulationTimer = null;
 
 init();
@@ -529,11 +508,9 @@ function init() {
   scene.background = new THREE.Color(CFG.bg);
   scene.fog = new THREE.Fog(CFG.bg, 10, 180);
 
-  // Cámara
   camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1500);
   camera.position.set(5, 6, 8);
 
-  // Renderer
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -541,23 +518,18 @@ function init() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
 
-  // Luces
   scene.add(new THREE.HemisphereLight(0xffffff, 0xffffff, 0.8));
   const dir = new THREE.DirectionalLight(0xffffff, 1.5);
   dir.position.set(5, 15, 10);
   dir.castShadow = true;
   dir.shadow.mapSize.set(2048, 2048);
-  dir.shadow.camera.left = -50;
-  dir.shadow.camera.right = 50;
-  dir.shadow.camera.top = 50;
-  dir.shadow.camera.bottom = -50;
+  dir.shadow.camera.left = -50; dir.shadow.camera.right = 50;
+  dir.shadow.camera.top = 50; dir.shadow.camera.bottom = -50;
   scene.add(dir);
 
-  // Grid grande
   const grid = new THREE.GridHelper(120, 120, 0xc7c7cc, 0xe5e5ea);
   scene.add(grid);
 
-  // Ejes globales
   const globalAxes = new THREE.AxesHelper(2.5);
   globalAxes.material.depthTest = false;
   globalAxes.renderOrder = 1;
@@ -565,7 +537,6 @@ function init() {
 
   gridTexture = createTechTexture();
 
-  // Orbit Controls (zoom siempre activo)
   orbit = new OrbitControls(camera, renderer.domElement);
   orbit.enableDamping = true;
   orbit.dampingFactor = 0.05;
@@ -575,18 +546,19 @@ function init() {
   orbit.enableZoom = true;
 
   setupQuadCameras();
+
   window.addEventListener('resize', onResize);
   setupTouchEvents();
   setupEditButton();
+  setupColorDialogSync();
 
-  // UI
   document.getElementById('btn-start').addEventListener('click', () => {
     document.getElementById('overlay').style.opacity = 0;
     setTimeout(() => { document.getElementById('overlay').style.display = 'none'; }, 500);
     spawn('box');
   });
 
-  // Funciones Globales
+  // Expose
   window.spawn = spawn;
   window.setMode = setMode;
   window.del = del;
@@ -600,24 +572,30 @@ function init() {
   window.toggleSpace = toggleSpace;
   window.setTheme = setTheme;
 
-  // Cámara
   window.fitAllObjects = fitAllObjects;
   window.focusSelected = focusSelected;
   window.snapView = snapView;
   window.toggleQuadView = toggleQuadView;
+
+  window.openColorDialog = openColorDialog;
+  window.closeColorDialog = closeColorDialog;
+  window.applyColor = applyColor;
+
+  window.toggleMultiSelect = toggleMultiSelect;
+  window.toggleSubMode = toggleSubMode;
 }
 
 /* =========================
-   ORBIT LOCK (mantener ZOOM)
+   Orbit lock (zoom ALWAYS)
    ========================= */
 function setOrbitLock(locked) {
   orbit.enableRotate = !locked;
   orbit.enablePan = !locked;
-  orbit.enableZoom = true; // SIEMPRE
+  orbit.enableZoom = true; // nunca se desactiva
 }
 
 /* =========================
-   TEMA CLARO / OSCURO
+   Theme
    ========================= */
 function setTheme(theme) {
   const body = document.body;
@@ -640,7 +618,7 @@ function setTheme(theme) {
 }
 
 /* =========================
-   CÁMARA: focus / fit / views
+   Camera helpers
    ========================= */
 function focusOnObject(obj, { keepDistance = true, smooth = true } = {}) {
   if (!obj) return;
@@ -680,13 +658,11 @@ function focusOnObject(obj, { keepDistance = true, smooth = true } = {}) {
   function step(now) {
     const t = Math.min(1, (now - t0) / D);
     const k = t * (2 - t);
-
     camera.position.lerpVectors(startPos, endPos, k);
     orbit.target.lerpVectors(startTarget, endTarget, k);
     camera.lookAt(orbit.target);
     orbit.update();
     syncQuadTargets();
-
     if (t < 1) requestAnimationFrame(step);
   }
   requestAnimationFrame(step);
@@ -765,13 +741,12 @@ function snapView(name) {
 
 function toggleQuadView() {
   enableQuadView = !enableQuadView;
-  const btn = document.getElementById('btn-quad');
-  btn.classList.toggle('active', enableQuadView);
+  document.getElementById('btn-quad').classList.toggle('active', enableQuadView);
   syncQuadTargets();
 }
 
 /* =========================
-   QUAD VIEW (4 ventanas)
+   Quad view
    ========================= */
 function setupQuadCameras() {
   const aspect = window.innerWidth / window.innerHeight;
@@ -787,7 +762,6 @@ function setupQuadCameras() {
 function syncQuadTargets() {
   const t = orbit?.target?.clone?.() || new THREE.Vector3(0,0,0);
 
-  // Distancias fijas para ortho (solo posiciones)
   camTop.position.set(t.x, t.y + 30, t.z);
   camTop.up.set(0, 0, -1);
   camTop.lookAt(t);
@@ -802,7 +776,7 @@ function syncQuadTargets() {
 }
 
 /* =========================
-   GIZMOS
+   Gizmos
    ========================= */
 function createGizmo(mode, targetObject) {
   if (currentGizmo) scene.remove(currentGizmo);
@@ -813,7 +787,12 @@ function createGizmo(mode, targetObject) {
 
   if (currentGizmo) {
     currentGizmo.position.copy(targetObject.position);
-    if (currentSpace === 'local') currentGizmo.rotation.copy(targetObject.rotation);
+
+    // 🔥 IMPORTANTE: en world, el gizmo queda alineado al mundo
+    // en local, sigue al objeto (para que el eje que ves sea el eje que aplica)
+    if (currentSpace === 'local') currentGizmo.quaternion.copy(targetObject.quaternion);
+    else currentGizmo.quaternion.identity();
+
     scene.add(currentGizmo);
   }
   return currentGizmo;
@@ -821,42 +800,23 @@ function createGizmo(mode, targetObject) {
 
 function createTranslateGizmo() {
   const gizmo = new THREE.Group();
-  gizmo.name = 'TranslateGizmo';
-
   const arrowLength = CFG.arrowSize;
   const arrowHeadLength = 0.6;
   const arrowHeadWidth = 0.4;
 
-  const arrowX = new THREE.ArrowHelper(
-    new THREE.Vector3(1, 0, 0),
-    new THREE.Vector3(0, 0, 0),
-    arrowLength, 0xFF3B30, arrowHeadLength, arrowHeadWidth
-  );
-  arrowX.name = 'ArrowX';
+  const arrowX = new THREE.ArrowHelper(new THREE.Vector3(1,0,0), new THREE.Vector3(0,0,0), arrowLength, 0xFF3B30, arrowHeadLength, arrowHeadWidth);
   arrowX.userData.axis = 'x';
 
-  const arrowY = new THREE.ArrowHelper(
-    new THREE.Vector3(0, 1, 0),
-    new THREE.Vector3(0, 0, 0),
-    arrowLength, 0x34C759, arrowHeadLength, arrowHeadWidth
-  );
-  arrowY.name = 'ArrowY';
+  const arrowY = new THREE.ArrowHelper(new THREE.Vector3(0,1,0), new THREE.Vector3(0,0,0), arrowLength, 0x34C759, arrowHeadLength, arrowHeadWidth);
   arrowY.userData.axis = 'y';
 
-  const arrowZ = new THREE.ArrowHelper(
-    new THREE.Vector3(0, 0, 1),
-    new THREE.Vector3(0, 0, 0),
-    arrowLength, 0x007AFF, arrowHeadLength, arrowHeadWidth
-  );
-  arrowZ.name = 'ArrowZ';
+  const arrowZ = new THREE.ArrowHelper(new THREE.Vector3(0,0,1), new THREE.Vector3(0,0,0), arrowLength, 0x007AFF, arrowHeadLength, arrowHeadWidth);
   arrowZ.userData.axis = 'z';
 
-  const centerGeo = new THREE.SphereGeometry(0.3, 16, 16);
-  const centerMat = new THREE.MeshBasicMaterial({
-    color: 0xFFFFFF, transparent: true, opacity: 0.8, depthTest: false
-  });
-  const centerSphere = new THREE.Mesh(centerGeo, centerMat);
-  centerSphere.name = 'CenterSphere';
+  const centerSphere = new THREE.Mesh(
+    new THREE.SphereGeometry(0.3, 16, 16),
+    new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.8, depthTest: false })
+  );
   centerSphere.userData.axis = 'free';
   centerSphere.renderOrder = 999;
 
@@ -868,40 +828,34 @@ function createTranslateGizmo() {
       child.renderOrder = 999;
     }
   });
-
   return gizmo;
 }
 
 function createRotateGizmo() {
   const gizmo = new THREE.Group();
-  gizmo.name = 'RotateGizmo';
-
   const radius = 2.0;
   const segments = 64;
 
   const ringX = new THREE.Mesh(
     new THREE.TorusGeometry(radius, 0.08, 16, segments),
-    new THREE.MeshBasicMaterial({ color: 0xFF3B30, transparent: true, opacity: 0.8, depthTest: false })
+    new THREE.MeshBasicMaterial({ color: 0xFF3B30, transparent: true, opacity: 0.85, depthTest: false })
   );
   ringX.rotation.y = Math.PI / 2;
-  ringX.name = 'RingX';
   ringX.userData.axis = 'x';
   ringX.renderOrder = 999;
 
   const ringY = new THREE.Mesh(
     new THREE.TorusGeometry(radius, 0.08, 16, segments),
-    new THREE.MeshBasicMaterial({ color: 0x34C759, transparent: true, opacity: 0.8, depthTest: false })
+    new THREE.MeshBasicMaterial({ color: 0x34C759, transparent: true, opacity: 0.85, depthTest: false })
   );
   ringY.rotation.x = Math.PI / 2;
-  ringY.name = 'RingY';
   ringY.userData.axis = 'y';
   ringY.renderOrder = 999;
 
   const ringZ = new THREE.Mesh(
     new THREE.TorusGeometry(radius, 0.08, 16, segments),
-    new THREE.MeshBasicMaterial({ color: 0x007AFF, transparent: true, opacity: 0.8, depthTest: false })
+    new THREE.MeshBasicMaterial({ color: 0x007AFF, transparent: true, opacity: 0.85, depthTest: false })
   );
-  ringZ.name = 'RingZ';
   ringZ.userData.axis = 'z';
   ringZ.renderOrder = 999;
 
@@ -911,8 +865,6 @@ function createRotateGizmo() {
 
 function createScaleGizmo() {
   const gizmo = new THREE.Group();
-  gizmo.name = 'ScaleGizmo';
-
   const length = 2.0;
   const handleSize = 0.3;
 
@@ -921,55 +873,45 @@ function createScaleGizmo() {
     new THREE.MeshBasicMaterial({ color: 0xFF3B30, transparent: true, opacity: 0.9, depthTest: false })
   );
   handleX.position.set(length, 0, 0);
-  handleX.name = 'HandleX';
   handleX.userData.axis = 'x';
-  handleX.renderOrder = 999;
 
   const lineX = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(length,0,0)]),
     new THREE.LineBasicMaterial({ color: 0xFF3B30, linewidth: 3, depthTest: false })
   );
-  lineX.renderOrder = 999;
 
   const handleY = new THREE.Mesh(
     new THREE.BoxGeometry(handleSize, handleSize, handleSize),
     new THREE.MeshBasicMaterial({ color: 0x34C759, transparent: true, opacity: 0.9, depthTest: false })
   );
   handleY.position.set(0, length, 0);
-  handleY.name = 'HandleY';
   handleY.userData.axis = 'y';
-  handleY.renderOrder = 999;
 
   const lineY = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,length,0)]),
     new THREE.LineBasicMaterial({ color: 0x34C759, linewidth: 3, depthTest: false })
   );
-  lineY.renderOrder = 999;
 
   const handleZ = new THREE.Mesh(
     new THREE.BoxGeometry(handleSize, handleSize, handleSize),
     new THREE.MeshBasicMaterial({ color: 0x007AFF, transparent: true, opacity: 0.9, depthTest: false })
   );
   handleZ.position.set(0, 0, length);
-  handleZ.name = 'HandleZ';
   handleZ.userData.axis = 'z';
-  handleZ.renderOrder = 999;
 
   const lineZ = new THREE.Line(
     new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0,0,0), new THREE.Vector3(0,0,length)]),
     new THREE.LineBasicMaterial({ color: 0x007AFF, linewidth: 3, depthTest: false })
   );
-  lineZ.renderOrder = 999;
 
   const centerCube = new THREE.Mesh(
     new THREE.BoxGeometry(handleSize, handleSize, handleSize),
     new THREE.MeshBasicMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.9, depthTest: false })
   );
-  centerCube.name = 'CenterCube';
   centerCube.userData.axis = 'uniform';
-  centerCube.renderOrder = 999;
 
   gizmo.add(handleX, lineX, handleY, lineY, handleZ, lineZ, centerCube);
+  gizmo.traverse((child) => { if (child.material) { child.material.depthTest = false; child.material.depthWrite = false; child.renderOrder = 999; }});
   return gizmo;
 }
 
@@ -980,13 +922,16 @@ function removeGizmo() { if (currentGizmo) { scene.remove(currentGizmo); current
 function updateGizmoPosition() {
   if (currentGizmo && selectedObject) {
     currentGizmo.position.copy(selectedObject.position);
-    if (currentSpace === 'local') currentGizmo.rotation.copy(selectedObject.rotation);
+
+    if (currentSpace === 'local') currentGizmo.quaternion.copy(selectedObject.quaternion);
+    else currentGizmo.quaternion.identity();
+
     updateEditButtonPosition();
   }
 }
 
 /* =========================
-   EDIT BUTTON
+   Edit button
    ========================= */
 function setupEditButton() {
   editValuesBtn.addEventListener('click', (e) => {
@@ -1004,9 +949,11 @@ function setupEditButton() {
 
 function updateEditButtonPosition() {
   if (!selectedObject || !editValuesBtn.classList.contains('visible')) return;
+
   const objPos = selectedObject.position.clone();
   objPos.x += 3.5;
   objPos.y += 1.0;
+
   const screenPos = toScreenPosition(objPos);
   editValuesBtn.style.left = screenPos.x + 'px';
   editValuesBtn.style.top = screenPos.y + 'px';
@@ -1014,7 +961,7 @@ function updateEditButtonPosition() {
 }
 
 /* =========================
-   TOUCH / POINTER
+   Touch events
    ========================= */
 function setupTouchEvents() {
   const canvas = renderer.domElement;
@@ -1038,9 +985,7 @@ function setupTouchEvents() {
   });
 
   canvas.addEventListener('pointermove', (e) => {
-    if (isDragging && selectedObject && activeHandle) {
-      manipulateObject(e.clientX, e.clientY);
-    }
+    if (isDragging && selectedObject && activeHandle) manipulateObject(e.clientX, e.clientY);
   });
 
   canvas.addEventListener('pointerup', (e) => {
@@ -1089,9 +1034,7 @@ function getIntersectedHandle(x, y) {
   raycaster.setFromCamera(mouse, camera);
 
   const handles = [];
-  currentGizmo.traverse((child) => {
-    if (child.isMesh || child.isLine) handles.push(child);
-  });
+  currentGizmo.traverse((child) => { if (child.isMesh || child.isLine) handles.push(child); });
 
   const intersects = raycaster.intersectObjects(handles, true);
   if (intersects.length > 0) {
@@ -1100,6 +1043,32 @@ function getIntersectedHandle(x, y) {
     return obj;
   }
   return null;
+}
+
+/* =========================
+   ✅ Concordancia eje ⇄ efecto (WORLD / LOCAL)
+   - Translate: world mueve en ejes mundo; local mueve en ejes del objeto.
+   - Rotate: world rota en ejes mundo; local rota sobre ejes locales del objeto.
+   ========================= */
+function rotateWorld(obj, worldAxis, angle) {
+  const q = new THREE.Quaternion().setFromAxisAngle(worldAxis, angle);
+  obj.quaternion.premultiply(q);      // world rotation
+  obj.rotation.setFromQuaternion(obj.quaternion);
+}
+function translateByAxis(obj, axisName, delta) {
+  // axis base in local coords
+  let v = new THREE.Vector3(0,0,0);
+  if (axisName === 'x') v.set(1,0,0);
+  if (axisName === 'y') v.set(0,1,0);
+  if (axisName === 'z') v.set(0,0,1);
+
+  v.multiplyScalar(delta);
+
+  if (currentSpace === 'local') {
+    // convert local axis movement to world direction using object orientation
+    v.applyQuaternion(obj.quaternion);
+  }
+  obj.position.add(v);
 }
 
 function manipulateObject(x, y) {
@@ -1111,32 +1080,54 @@ function manipulateObject(x, y) {
   const scaleSpeed = 0.01;
 
   if (currentMode === 'translate') {
-    if (axis === 'x') selectedObject.position.x += (x - dragStartPos.x) * movementScale;
-    else if (axis === 'y') selectedObject.position.y -= (y - dragStartPos.y) * movementScale;
-    else if (axis === 'z') selectedObject.position.z += (y - dragStartPos.y) * movementScale;
+    if (axis === 'x') translateByAxis(selectedObject, 'x', (x - dragStartPos.x) * movementScale);
+    else if (axis === 'y') translateByAxis(selectedObject, 'y', -(y - dragStartPos.y) * movementScale);
+    else if (axis === 'z') translateByAxis(selectedObject, 'z', (y - dragStartPos.y) * movementScale);
     else if (axis === 'free') {
-      const deltaX = (x - dragStartPos.x) * movementScale;
-      const deltaZ = (y - dragStartPos.y) * movementScale;
-      selectedObject.position.x += deltaX;
-      selectedObject.position.z += deltaZ;
+      // free: XZ plane (in world or local orientation)
+      const dx = (x - dragStartPos.x) * movementScale;
+      const dz = (y - dragStartPos.y) * movementScale;
+      if (currentSpace === 'local') {
+        const v = new THREE.Vector3(dx, 0, dz).applyQuaternion(selectedObject.quaternion);
+        selectedObject.position.add(v);
+      } else {
+        selectedObject.position.x += dx;
+        selectedObject.position.z += dz;
+      }
     }
+
     enforceLimits(selectedObject);
     updateMeasurementLine();
     updateIntelligentZoom();
 
   } else if (currentMode === 'rotate') {
+    // use combined delta; you can tweak feel here
     const delta = (x - dragStartPos.x + y - dragStartPos.y) * rotationScale;
-    if (axis === 'x') selectedObject.rotation.x += delta;
-    else if (axis === 'y') selectedObject.rotation.y += delta;
-    else if (axis === 'z') selectedObject.rotation.z += delta;
+
+    if (axis === 'x' || axis === 'y' || axis === 'z') {
+      const axLocal = (axis === 'x') ? new THREE.Vector3(1,0,0)
+                    : (axis === 'y') ? new THREE.Vector3(0,1,0)
+                    : new THREE.Vector3(0,0,1);
+
+      if (currentSpace === 'local') {
+        // local axis rotation (axis shown == axis applied)
+        selectedObject.rotateOnAxis(axLocal, delta);
+      } else {
+        // world axis rotation (axis shown == world axis)
+        const axWorld = axLocal.clone();
+        rotateWorld(selectedObject, axWorld, delta);
+      }
+    }
 
   } else if (currentMode === 'scale') {
-    const delta = (y - dragStartPos.y) * scaleSpeed;
-    if (axis === 'x') selectedObject.scale.x = clampScale(selectedObject.scale.x - delta);
-    else if (axis === 'y') selectedObject.scale.y = clampScale(selectedObject.scale.y - delta);
-    else if (axis === 'z') selectedObject.scale.z = clampScale(selectedObject.scale.z - delta);
+    // ✅ invertido: arrastrar hacia ARRIBA = crecer
+    const delta = (dragStartPos.y - y) * scaleSpeed;
+
+    if (axis === 'x') selectedObject.scale.x = clampScale(selectedObject.scale.x + delta);
+    else if (axis === 'y') selectedObject.scale.y = clampScale(selectedObject.scale.y + delta);
+    else if (axis === 'z') selectedObject.scale.z = clampScale(selectedObject.scale.z + delta);
     else if (axis === 'uniform') {
-      const s = clampScale(selectedObject.scale.x - delta);
+      const s = clampScale(selectedObject.scale.x + delta);
       selectedObject.scale.set(s, s, s);
     }
   }
@@ -1146,10 +1137,13 @@ function manipulateObject(x, y) {
   syncQuadTargets();
 }
 
-function clampScale(v) {
-  return Math.max(CFG.minScale, Math.min(CFG.maxScale, v));
-}
+function clampScale(v) { return Math.max(CFG.minScale, Math.min(CFG.maxScale, v)); }
 
+/* =========================
+   Double tap selection
+   - si Multi está activo: doble tap agrega/quita del set
+   - si Multi no: doble tap selecciona uno (toggle)
+   ========================= */
 function handleDoubleTap(x, y) {
   const rect = renderer.domElement.getBoundingClientRect();
   mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
@@ -1160,61 +1154,158 @@ function handleDoubleTap(x, y) {
 
   if (intersects.length > 0) {
     const hit = intersects[0].object;
-    if (selectedObject === hit) deselectObject();
-    else selectObject(hit);
-  } else {
-    deselectObject();
-  }
-}
 
-function selectObject(obj) {
-  if (selectedObject) deselectObject();
-
-  selectedObject = obj;
-
-  obj.material.color.setHex(CFG.selColor);
-  if (obj.userData.edges) {
-    obj.userData.edges.material.color.setHex(CFG.selColorLight);
-    obj.userData.edges.material.opacity = 0.8;
-  }
-
-  createGizmo(currentMode, obj);
-
-  exitButton.classList.add('visible');
-  spaceToggle.classList.add('visible');
-  editValuesBtn.classList.add('visible');
-
-  saveOriginState();
-  updateEditButtonPosition();
-
-  // FIX CLAVE: pivote y foco al seleccionado
-  focusOnObject(obj, { keepDistance: true, smooth: true });
-}
-
-function deselectObject() {
-  if (selectedObject) {
-    selectedObject.material.color.setHex(selectedObject.userData.originalColor || CFG.objColor);
-    if (selectedObject.userData.edges) {
-      selectedObject.userData.edges.material.color.setHex(CFG.objEdge);
-      selectedObject.userData.edges.material.opacity = 0.5;
+    if (multiSelectEnabled) {
+      toggleInMultiSelection(hit);
+      // active object = último tocado
+      setActiveSelected(hit);
+    } else {
+      if (selectedObject === hit) deselectAll();
+      else selectSingle(hit);
     }
-    selectedObject = null;
+  } else {
+    if (!multiSelectEnabled) deselectAll();
+  }
+}
+
+function selectSingle(obj) {
+  deselectAll();
+  selectedObjects = [obj];
+  setActiveSelected(obj);
+  applySelectionUI();
+}
+
+function toggleInMultiSelection(obj) {
+  const idx = selectedObjects.indexOf(obj);
+  if (idx >= 0) selectedObjects.splice(idx, 1);
+  else selectedObjects.push(obj);
+
+  // if removing active, pick another
+  if (selectedObject === obj && idx >= 0) {
+    selectedObject = selectedObjects[selectedObjects.length - 1] || null;
+  }
+  applySelectionUI();
+}
+
+function setActiveSelected(obj) {
+  selectedObject = obj;
+  applySelectionUI();
+}
+
+function applySelectionUI() {
+  // reset all first
+  objects.forEach(o => setObjectSelectedVisual(o, false));
+
+  // mark multi set
+  selectedObjects.forEach(o => setObjectSelectedVisual(o, true));
+
+  if (selectedObject) {
+    createGizmo(currentMode, selectedObject);
+    exitButton.classList.add('visible');
+    spaceToggle.classList.add('visible');
+    editValuesBtn.classList.add('visible');
+    subtoolbar.classList.add('visible');
+
+    saveOriginState();
+    updateEditButtonPosition();
+    focusOnObject(selectedObject, { keepDistance: true, smooth: true });
+  } else {
+    removeGizmo();
+    exitButton.classList.remove('visible');
+    spaceToggle.classList.remove('visible');
+    editValuesBtn.classList.remove('visible');
+    subtoolbar.classList.remove('visible');
+    hideMeasurementLine();
+    hideConfirmDialog();
+    closeAxisDialog();
+    closeColorDialog();
   }
 
-  removeGizmo();
-  hideMeasurementLine();
-  hideConfirmDialog();
-  closeAxisDialog();
+  // apply subcomponent view toggles to all selected (or all if none)
+  objects.forEach(o => applySubcomponentView(o));
+}
 
-  exitButton.classList.remove('visible');
-  spaceToggle.classList.remove('visible');
-  editValuesBtn.classList.remove('visible');
+function setObjectSelectedVisual(obj, on) {
+  if (!obj?.material) return;
 
-  setOrbitLock(false);
+  if (on) {
+    obj.material.color.setHex(CFG.selColor);
+    if (obj.userData.edges) {
+      obj.userData.edges.material.color.setHex(CFG.selColorLight);
+      obj.userData.edges.material.opacity = 0.85;
+    }
+  } else {
+    obj.material.color.setHex(obj.userData.originalColor ?? CFG.objColor);
+    if (obj.userData.edges) {
+      obj.userData.edges.material.color.setHex(CFG.objEdge);
+      obj.userData.edges.material.opacity = 0.5;
+    }
+  }
+}
+
+function deselectAll() {
+  selectedObject = null;
+  selectedObjects = [];
+  applySelectionUI();
 }
 
 /* =========================
-   AXIS INPUT DIALOG
+   Sub-toolbar toggles
+   - Vértices: muestra Points helper
+   - Bordes: toggle edges
+   - Caras: wireframe (material.wireframe)
+   ========================= */
+function toggleMultiSelect() {
+  multiSelectEnabled = !multiSelectEnabled;
+  document.getElementById('sub-multi').classList.toggle('active', multiSelectEnabled);
+
+  // si apagas multi, deja sólo el activo
+  if (!multiSelectEnabled && selectedObject) {
+    selectedObjects = [selectedObject];
+    applySelectionUI();
+  }
+}
+
+function toggleSubMode(which) {
+  if (which === 'verts') showVerts = !showVerts;
+  if (which === 'edges') showEdges = !showEdges;
+  if (which === 'faces') showFacesWire = !showFacesWire;
+
+  document.getElementById('sub-verts').classList.toggle('active', showVerts);
+  document.getElementById('sub-edges').classList.toggle('active', showEdges);
+  document.getElementById('sub-faces').classList.toggle('active', showFacesWire);
+
+  objects.forEach(o => applySubcomponentView(o));
+}
+
+function applySubcomponentView(obj) {
+  // edges
+  if (obj.userData.edges) obj.userData.edges.visible = showEdges;
+
+  // faces wireframe (ojo: lo aplico solo cuando está seleccionado o multi)
+  const isSel = selectedObjects.includes(obj);
+  obj.material.wireframe = !!(showFacesWire && isSel);
+
+  // vertices helper
+  if (showVerts && isSel) {
+    if (!obj.userData.vertexHelper) {
+      const pos = obj.geometry.attributes.position;
+      const ptsGeo = new THREE.BufferGeometry();
+      ptsGeo.setAttribute('position', pos.clone());
+      const ptsMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.06, sizeAttenuation: true });
+      const pts = new THREE.Points(ptsGeo, ptsMat);
+      pts.renderOrder = 998;
+      obj.add(pts);
+      obj.userData.vertexHelper = pts;
+    }
+    obj.userData.vertexHelper.visible = true;
+  } else {
+    if (obj.userData.vertexHelper) obj.userData.vertexHelper.visible = false;
+  }
+}
+
+/* =========================
+   Axis dialog
    ========================= */
 function openAxisDialog() {
   if (!selectedObject) return;
@@ -1277,7 +1368,7 @@ function closeAxisDialog() {
 }
 
 /* =========================
-   CONFIRM MINI
+   Confirm mini
    ========================= */
 function showConfirmDialog() { confirmDialog.classList.add('visible'); }
 function hideConfirmDialog() { confirmDialog.classList.remove('visible'); }
@@ -1290,16 +1381,11 @@ function continueMoving() {
     setOrbitLock(false);
   }
 }
-
-function finishMoving() {
-  hideConfirmDialog();
-  deselectObject();
-}
-
-function exitManipulation() { deselectObject(); }
+function finishMoving() { hideConfirmDialog(); deselectAll(); }
+function exitManipulation() { deselectAll(); }
 
 /* =========================
-   GLOBAL/LOCAL
+   Global/Local toggle
    ========================= */
 function toggleSpace() {
   if (currentSpace === 'world') {
@@ -1313,12 +1399,11 @@ function toggleSpace() {
     document.getElementById('space-icon').textContent = '🌍';
     document.getElementById('space-text').textContent = 'Global';
   }
-
   if (selectedObject) createGizmo(currentMode, selectedObject);
 }
 
 /* =========================
-   INTELLIGENT ZOOM (FIX)
+   Smart zoom
    ========================= */
 function updateIntelligentZoom() {
   if (!selectedObject || !isDragging || currentMode !== 'translate') return;
@@ -1328,15 +1413,10 @@ function updateIntelligentZoom() {
   maxDragDistance = Math.max(maxDragDistance, distance);
 
   let targetZoom;
-  if (distance > maxDragDistance * 0.5) {
-    targetZoom = initialCameraDistance + (distance * 2);
-  } else {
+  if (distance > maxDragDistance * 0.5) targetZoom = initialCameraDistance + (distance * 2);
+  else {
     const returnRatio = maxDragDistance === 0 ? 0 : (distance / maxDragDistance);
-    targetZoom = THREE.MathUtils.lerp(
-      initialCameraDistance,
-      initialCameraDistance + (maxDragDistance * 2),
-      returnRatio
-    );
+    targetZoom = THREE.MathUtils.lerp(initialCameraDistance, initialCameraDistance + (maxDragDistance * 2), returnRatio);
   }
 
   targetZoom = THREE.MathUtils.clamp(targetZoom, CFG.minZoom, CFG.maxZoom);
@@ -1353,7 +1433,7 @@ function updateIntelligentZoom() {
 }
 
 /* =========================
-   MEDICIÓN
+   Measurement
    ========================= */
 function showMeasurementLine() {
   measurementLine.classList.add('visible');
@@ -1402,7 +1482,7 @@ function toScreenPosition(position) {
 }
 
 /* =========================
-   LÍMITES
+   Limits
    ========================= */
 function enforceLimits(obj) {
   if (!obj) return;
@@ -1416,7 +1496,7 @@ function enforceLimits(obj) {
 }
 
 /* =========================
-   CREACIÓN DE OBJETOS
+   Primitives (incluye planos)
    ========================= */
 function spawn(type) {
   let geo;
@@ -1428,41 +1508,55 @@ function spawn(type) {
   else if (type === 'torus') geo = new THREE.TorusGeometry(1.0, 0.28, 24, 80);
   else if (type === 'capsule') geo = new THREE.CapsuleGeometry(0.55, 1.2, 12, 24);
   else if (type === 'prism6') geo = new THREE.CylinderGeometry(0.9, 0.9, 1.8, 6);
+  else if (type === 'plane') geo = new THREE.PlaneGeometry(3.5, 3.5, 1, 1);
+  else if (type === 'disc') geo = new THREE.CircleGeometry(1.8, 64);
   else geo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
 
   const mat = new THREE.MeshStandardMaterial({
-    color: CFG.objColor, roughness: 0.4, metalness: 0.1
+    color: CFG.objColor, roughness: 0.45, metalness: 0.08,
+    transparent: true, opacity: 1.0, side: THREE.DoubleSide
   });
 
   const mesh = new THREE.Mesh(geo, mat);
   mesh.castShadow = true;
   mesh.receiveShadow = true;
+
   mesh.position.set((Math.random()-0.5)*2, 0.75, (Math.random()-0.5)*2);
 
+  // planos: por defecto horizontal, como “lámina”
+  if (type === 'plane' || type === 'disc') {
+    mesh.rotation.x = -Math.PI / 2;
+    mesh.position.y = 0.02;
+    mesh.receiveShadow = true;
+  }
+
+  // edges
   const edges = new THREE.LineSegments(
     new THREE.EdgesGeometry(geo),
     new THREE.LineBasicMaterial({ color: CFG.objEdge, transparent:true, opacity:0.5 })
   );
   mesh.add(edges);
   mesh.userData.edges = edges;
+
   mesh.userData.originalColor = CFG.objColor;
+  mesh.userData.vertexHelper = null;
 
   scene.add(mesh);
   objects.push(mesh);
   applyRenderMode(mesh, currentRenderMode);
 
-  // Auto-select + focus (soluciona “nuevo objeto lejos”)
-  selectObject(mesh);
+  // foco al nuevo, pero NO selecciona automáticamente
   focusOnObject(mesh, { keepDistance: false, smooth: true });
 }
 
 /* =========================
-   MODOS
+   Modes
    ========================= */
 function setMode(mode) {
   currentMode = mode;
-  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-  const map = {translate:'btn-move', rotate:'btn-rot', scale:'btn-scale'};
+
+  document.querySelectorAll('#toolbar .tool-btn').forEach(b => b.classList.remove('active'));
+  const map = { translate:'btn-move', rotate:'btn-rot', scale:'btn-scale' };
   const id = map[mode];
   if (id) document.getElementById(id).classList.add('active');
 
@@ -1472,6 +1566,9 @@ function setMode(mode) {
   }
 }
 
+/* =========================
+   Render modes
+   ========================= */
 function setRenderMode(mode, btn) {
   currentRenderMode = mode;
   document.querySelectorAll('.render-opt').forEach(b => b.classList.remove('active'));
@@ -1482,42 +1579,131 @@ function setRenderMode(mode, btn) {
 function applyRenderMode(mesh, mode) {
   const m = mesh.material;
   const e = mesh.userData.edges;
+
   if (mode === 'flat') {
     m.map = null; m.roughness = 0.4;
-    if (mesh !== selectedObject) m.color.setHex(CFG.objColor);
-    if (e) e.visible = true;
+    if (!selectedObjects.includes(mesh)) m.color.setHex(mesh.userData.originalColor ?? CFG.objColor);
+    if (e) e.visible = showEdges;
   } else if (mode === 'lightmap') {
     m.map = null; m.roughness = 1;
-    if (mesh !== selectedObject) m.color.setHex(0xd0d0d5);
+    if (!selectedObjects.includes(mesh)) m.color.setHex(0xd0d0d5);
     if (e) e.visible = false;
   } else if (mode === 'workbench') {
     m.map = gridTexture; m.roughness = 0.5;
-    if (mesh !== selectedObject) m.color.setHex(0xffffff);
-    if (e) e.visible = true;
+    if (!selectedObjects.includes(mesh)) m.color.setHex(0xffffff);
+    if (e) e.visible = showEdges;
   }
   m.needsUpdate = true;
 }
 
+/* =========================
+   Delete / random
+   ========================= */
 function del() {
-  if (selectedObject) {
-    const o = selectedObject;
-    deselectObject();
-    scene.remove(o);
-    const idx = objects.indexOf(o);
-    if (idx >= 0) objects.splice(idx, 1);
+  if (selectedObjects.length) {
+    const toRemove = [...selectedObjects];
+    deselectAll();
+    toRemove.forEach(o => {
+      scene.remove(o);
+      const idx = objects.indexOf(o);
+      if (idx >= 0) objects.splice(idx, 1);
+    });
   }
 }
 
 function randomColor() {
-  if (selectedObject) {
+  if (!selectedObjects.length) return;
+  selectedObjects.forEach(o => {
     const newColor = Math.random() * 0xffffff;
-    selectedObject.material.color.setHex(newColor);
-    selectedObject.userData.originalColor = newColor;
-  }
+    o.material.color.setHex(newColor);
+    o.userData.originalColor = newColor;
+  });
+  applySelectionUI();
 }
 
 /* =========================
-   UTILS
+   Color picker (RGB + Alpha)
+   ========================= */
+function openColorDialog() {
+  if (!selectedObject) return;
+  syncColorDialogFromObject();
+  colorDialog.classList.add('visible');
+  setOrbitLock(true);
+}
+function closeColorDialog() {
+  colorDialog.classList.remove('visible');
+  setOrbitLock(false);
+}
+function setupColorDialogSync() {
+  const hex = document.getElementById('pick-hex');
+  const r = document.getElementById('pick-r');
+  const g = document.getElementById('pick-g');
+  const b = document.getElementById('pick-b');
+
+  hex.addEventListener('input', () => {
+    const { rr, gg, bb } = hexToRgb(hex.value);
+    r.value = rr; g.value = gg; b.value = bb;
+  });
+
+  [r,g,b].forEach(inp => {
+    inp.addEventListener('input', () => {
+      const rr = clamp255(parseInt(r.value,10));
+      const gg = clamp255(parseInt(g.value,10));
+      const bb = clamp255(parseInt(b.value,10));
+      hex.value = rgbToHex(rr,gg,bb);
+    });
+  });
+}
+function syncColorDialogFromObject() {
+  const c = selectedObject.material.color;
+  const rr = Math.round(c.r * 255);
+  const gg = Math.round(c.g * 255);
+  const bb = Math.round(c.b * 255);
+  document.getElementById('pick-r').value = rr;
+  document.getElementById('pick-g').value = gg;
+  document.getElementById('pick-b').value = bb;
+  document.getElementById('pick-a').value = (selectedObject.material.opacity ?? 1).toFixed(2);
+  document.getElementById('pick-hex').value = rgbToHex(rr,gg,bb);
+}
+function applyColor() {
+  if (!selectedObjects.length) return;
+
+  const rr = clamp255(parseInt(document.getElementById('pick-r').value, 10));
+  const gg = clamp255(parseInt(document.getElementById('pick-g').value, 10));
+  const bb = clamp255(parseInt(document.getElementById('pick-b').value, 10));
+  let aa = parseFloat(document.getElementById('pick-a').value);
+  if (!Number.isFinite(aa)) aa = 1;
+  aa = Math.max(0, Math.min(1, aa));
+
+  const col = new THREE.Color(rr/255, gg/255, bb/255);
+
+  selectedObjects.forEach(o => {
+    o.material.color.copy(col);
+    o.material.transparent = true;
+    o.material.opacity = aa;
+    o.material.needsUpdate = true;
+    o.userData.originalColor = col.getHex();
+  });
+
+  closeColorDialog();
+  applySelectionUI();
+}
+
+function clamp255(v){ if(!Number.isFinite(v)) return 0; return Math.max(0, Math.min(255, v)); }
+function rgbToHex(r,g,b){
+  const h = (n)=>n.toString(16).padStart(2,'0');
+  return `#${h(r)}${h(g)}${h(b)}`;
+}
+function hexToRgb(hex){
+  const s = hex.replace('#','');
+  const rr = parseInt(s.slice(0,2),16);
+  const gg = parseInt(s.slice(2,4),16);
+  const bb = parseInt(s.slice(4,6),16);
+  return { rr, gg, bb };
+}
+
+/* =========================
+   Utils
    ========================= */
 function showTapEffect(x, y) {
   const el = document.createElement('div');
@@ -1554,6 +1740,7 @@ function onResize() {
 
   const aspect = window.innerWidth / window.innerHeight;
   const frustum = 12;
+
   camTop.left = -frustum*aspect; camTop.right = frustum*aspect; camTop.top = frustum; camTop.bottom = -frustum;
   camFront.left = -frustum*aspect; camFront.right = frustum*aspect; camFront.top = frustum; camFront.bottom = -frustum;
   camRight.left = -frustum*aspect; camRight.right = frustum*aspect; camRight.top = frustum; camRight.bottom = -frustum;
@@ -1563,13 +1750,10 @@ function onResize() {
   camRight.updateProjectionMatrix();
 }
 
-/* =========================
-   RENDER LOOP
-   ========================= */
 function animate() {
   requestAnimationFrame(animate);
 
-  // anti-blackout / NaN guard
+  // guard NaN
   if (!Number.isFinite(camera.position.x) || !Number.isFinite(camera.position.y) || !Number.isFinite(camera.position.z)) {
     camera.position.set(5,6,8);
     orbit.target.set(0,0,0);
@@ -1578,10 +1762,7 @@ function animate() {
     syncQuadTargets();
   }
 
-  // orbit update siempre que no estés arrastrando gizmo (damping)
   if (!isDragging) orbit.update();
-
-  // actualizar botón edición
   if (selectedObject && editValuesBtn.classList.contains('visible')) updateEditButtonPosition();
 
   if (!enableQuadView) {
@@ -1591,12 +1772,9 @@ function animate() {
     return;
   }
 
-  // 4 views
   renderer.setScissorTest(true);
-  const w = window.innerWidth;
-  const h = window.innerHeight;
-  const hw = Math.floor(w / 2);
-  const hh = Math.floor(h / 2);
+  const w = window.innerWidth, h = window.innerHeight;
+  const hw = Math.floor(w / 2), hh = Math.floor(h / 2);
 
   function renderView(x, y, ww, hh, cam) {
     renderer.setViewport(x, y, ww, hh);
@@ -1604,8 +1782,6 @@ function animate() {
     renderer.render(scene, cam);
   }
 
-  // layout:
-  // TL: Top, TR: Front, BL: Right, BR: Perspective
   renderView(0, hh, hw, hh, camTop);
   renderView(hw, hh, hw, hh, camFront);
   renderView(0, 0, hw, hh, camRight);
