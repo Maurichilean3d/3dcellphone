@@ -1,18 +1,9 @@
-Entiendo perfectamente lo que sucede. El efecto de que el objeto "desaparezca" o salga disparado al infinito suele ocurrir por dos razones técnicas en móviles:
- * Conflicto de Gestos: Al arrastrar el dedo, el sistema confunde si quieres "mover la cámara" o "mover el objeto", sumando ambas velocidades y lanzando el objeto lejos.
- * Escala Negativa/Infinita: Si arrastras el cubo de escalar demasiado rápido hacia el centro, el objeto se invierte o se vuelve infinitamente pequeño (desaparece).
-🛠️ Solución Implementada: "Stability Patch"
-He aplicado un "Parche de Estabilidad" al código con estas mejoras de seguridad:
- * Jaula de Seguridad (Clamping): He limitado matemáticamente el movimiento. El objeto chocará contra una pared invisible si intentas alejarlo más de 10 metros del centro. Ya no puede "irse al infinito".
- * Límite de Escala: He prohibido que el objeto sea más pequeño que 0.1 (10cm). Así nunca desaparecerá por hacerse minúsculo.
- * Bloqueo Agresivo de Cámara: En el momento exacto que tocas un eje del Gizmo, la cámara se "congela" totalmente. Solo se reactiva al soltar el dedo. Esto elimina el "patinaje" o sensibilidad extrema.
-Copia este código. Es la versión más robusta hasta ahora:
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover" />
-  <title>MR Studio - Stable</title>
+  <title>MR Studio Pro</title>
   <style>
     /* === ESTILOS UI (APPLE STYLE) === */
     body { 
@@ -78,13 +69,63 @@ Copia este código. Es la versión más robusta hasta ahora:
     .btn-delete { color: #FF3B30; }
     .label { font-size: 9px; margin-top: 3px; font-weight: 700; opacity: 0.7; }
     .divider { width: 1px; background: rgba(0,0,0,0.1); margin: 0 4px; flex-shrink: 0; }
-
-    #toast {
-      position: absolute; top: 120px; left: 50%; transform: translateX(-50%);
-      background: rgba(255,255,255,0.95); padding: 10px 24px;
-      border-radius: 30px; font-size: 13px; font-weight: 600;
-      box-shadow: 0 5px 20px rgba(0,0,0,0.15); opacity: 0; transition: 0.3s; pointer-events: none;
-      white-space: nowrap;
+    
+    /* === SISTEMA DE COTAS === */
+    #dimension-bubble {
+      position: absolute;
+      background: rgba(0, 0, 0, 0.85);
+      color: white;
+      padding: 12px 20px;
+      border-radius: 20px;
+      font-size: 16px;
+      font-weight: 700;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+      pointer-events: auto;
+      opacity: 0;
+      transition: opacity 0.2s;
+      z-index: 200;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      backdrop-filter: blur(10px);
+    }
+    
+    #dimension-bubble.visible {
+      opacity: 1;
+    }
+    
+    #dimension-value {
+      font-family: 'SF Mono', 'Monaco', monospace;
+      letter-spacing: 0.5px;
+    }
+    
+    #dimension-unit {
+      font-size: 12px;
+      opacity: 0.7;
+    }
+    
+    #edit-dimension {
+      background: rgba(255, 255, 255, 0.2);
+      border: none;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    
+    #dimension-input {
+      background: rgba(255, 255, 255, 0.95);
+      border: 2px solid #FF9500;
+      color: #000;
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 700;
+      width: 80px;
+      text-align: center;
+      font-family: 'SF Mono', 'Monaco', monospace;
     }
     
     .tap-indicator {
@@ -98,8 +139,8 @@ Copia este código. Es la versión más robusta hasta ahora:
 <body>
 
 <div id="overlay">
-  <h1>MR STUDIO</h1>
-  <p>Estabilidad Mejorada & Bloqueo de Límites</p>
+  <h1>MR STUDIO PRO</h1>
+  <p>Gizmo Ultra-Grande • Movimiento Suave • Cotas Precisas</p>
   <button class="start-btn" id="btn-start">Comenzar</button>
 </div>
 
@@ -109,7 +150,11 @@ Copia este código. Es la versión más robusta hasta ahora:
   <button class="render-opt" onclick="setRenderMode('workbench', this)">Tech</button>
 </div>
 
-<div id="toast">Doble toque para seleccionar</div>
+<div id="dimension-bubble">
+  <span id="dimension-value">0.00</span>
+  <span id="dimension-unit">m</span>
+  <button id="edit-dimension">✏️</button>
+</div>
 
 <div id="toolbar-container">
   <div id="toolbar">
@@ -145,8 +190,12 @@ const CFG = {
   objColor: 0xdbe4eb,
   objEdge: 0xffffff,
   selColor: 0xFF9500,
-  maxDistance: 8.0, // Radio máximo de movimiento (Jaula de seguridad)
-  minScale: 0.1     // Escala mínima (Evita desaparición)
+  maxDistance: 15.0,
+  minScale: 0.05,
+  // NUEVOS: Control de movimiento
+  dragSensitivity: 0.15,  // Reduce sensibilidad al 15% (movimiento ultra-suave)
+  autoZoomThreshold: 8.0, // Distancia para activar zoom automático
+  maxAutoZoom: 25.0       // Zoom máximo automático
 };
 
 let scene, camera, renderer, orbit, transformControl;
@@ -161,13 +210,20 @@ let lastTapTime = 0;
 let touchStartX = 0, touchStartY = 0;
 let isGizmoInteracting = false;
 
+// Sistema de Cotas
+let initialPosition = new THREE.Vector3();
+let isEditingDimension = false;
+const dimensionBubble = document.getElementById('dimension-bubble');
+const dimensionValue = document.getElementById('dimension-value');
+const editButton = document.getElementById('edit-dimension');
+
 init();
 animate();
 
 function init() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(CFG.bg);
-  scene.fog = new THREE.Fog(CFG.bg, 10, 40);
+  scene.fog = new THREE.Fog(CFG.bg, 15, 50);
 
   // Cámara
   camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
@@ -181,58 +237,67 @@ function init() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
 
-  // Luces
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xffffff, 0.7));
-  const dir = new THREE.DirectionalLight(0xffffff, 1.2);
+  // Luces más dramáticas
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xffffff, 0.8));
+  const dir = new THREE.DirectionalLight(0xffffff, 1.5);
   dir.position.set(5, 12, 8);
   dir.castShadow = true;
   dir.shadow.mapSize.set(2048, 2048);
   scene.add(dir);
 
-  // Grid y Suelo invisible para colisiones de raycaster
+  // Grid
   const grid = new THREE.GridHelper(50, 50, 0xc7c7cc, 0xe5e5ea);
   scene.add(grid);
   
-  // AxesHelper estático
-  const globalAxes = new THREE.AxesHelper(1);
+  // Ejes globales más grandes
+  const globalAxes = new THREE.AxesHelper(2);
   globalAxes.material.depthTest = false; 
   globalAxes.renderOrder = 1;
   scene.add(globalAxes);
 
   gridTexture = createTechTexture();
 
-  // Orbit Controls (Cámara)
+  // Orbit Controls
   orbit = new OrbitControls(camera, renderer.domElement);
   orbit.enableDamping = true;
   orbit.dampingFactor = 0.05;
   orbit.maxPolarAngle = Math.PI / 2 - 0.05;
   orbit.minDistance = 2;
-  orbit.maxDistance = 20;
+  orbit.maxDistance = CFG.maxAutoZoom;
 
-  // Transform Controls (Gizmo)
+  // Transform Controls - GIZMO GIGANTE Y VISIBLE
   transformControl = new TransformControls(camera, renderer.domElement);
-  transformControl.setSize(2.5); // Gizmo Grande
+  transformControl.setSize(4.0); // Gizmo EXTRA GRANDE
   transformControl.space = 'local';
   
-  // === CRÍTICO: GESTIÓN DE EVENTOS DE ARRASTRE ===
+  // === PERSONALIZACIÓN DEL GIZMO ===
+  customizeGizmo();
+  
+  // === GESTIÓN DE EVENTOS ===
   transformControl.addEventListener('dragging-changed', (event) => {
-    // 1. Desactivar cámara SIEMPRE que se toque el gizmo
     orbit.enabled = !event.value;
     isGizmoInteracting = event.value;
     
-    // 2. Si empieza a arrastrar, feedback
     if(event.value) {
-      msg("Modificando...");
+      // Guardar posición inicial para calcular desplazamiento
+      if(transformControl.object) {
+        initialPosition.copy(transformControl.object.position);
+      }
+      showDimensionBubble();
     } else {
-      // Al soltar, verificamos límites una última vez
       enforceLimits(transformControl.object);
+      hideDimensionBubble();
     }
   });
 
-  // Listener para cuando el objeto cambia (se mueve/rota/escala)
-  transformControl.addEventListener('change', () => {
+  // Listener para movimiento con reducción de sensibilidad
+  transformControl.addEventListener('objectChange', () => {
     if (transformControl.object) {
+      // Aplicar reducción de sensibilidad en tiempo real
+      applySmoothMovement();
       enforceLimits(transformControl.object);
+      updateDimensionBubble();
+      autoZoomOnMove();
     }
   });
 
@@ -240,13 +305,13 @@ function init() {
 
   window.addEventListener('resize', onResize);
   setupTouchEvents();
+  setupDimensionEditor();
 
   // UI
   document.getElementById('btn-start').addEventListener('click', () => {
     document.getElementById('overlay').style.opacity = 0;
     setTimeout(() => {
       document.getElementById('overlay').style.display = 'none';
-      msg("Doble toque para editar");
     }, 500);
     spawn('box');
   });
@@ -259,26 +324,203 @@ function init() {
   window.randomColor = randomColor;
 }
 
-// === JAULA DE SEGURIDAD (ANTI-DESAPARICIÓN) ===
+// === PERSONALIZACIÓN DEL GIZMO (COLORES BRILLANTES Y GRUESOS) ===
+function customizeGizmo() {
+  // Colores ultra-brillantes para cada eje
+  const colors = {
+    X: 0xFF3B30,  // Rojo brillante
+    Y: 0x34C759,  // Verde brillante
+    Z: 0x007AFF,  // Azul brillante
+    XYZE: 0xFFFFFF // Blanco para centro
+  };
+  
+  // Aplicar después de que se cree el gizmo
+  setTimeout(() => {
+    transformControl.traverse((child) => {
+      if (child.material) {
+        // Hacer materiales más opacos y brillantes
+        if (child.material.color) {
+          const colorName = child.name.toUpperCase();
+          if (colorName.includes('X') && !colorName.includes('Y') && !colorName.includes('Z')) {
+            child.material.color.setHex(colors.X);
+          } else if (colorName.includes('Y') && !colorName.includes('X') && !colorName.includes('Z')) {
+            child.material.color.setHex(colors.Y);
+          } else if (colorName.includes('Z') && !colorName.includes('X') && !colorName.includes('Y')) {
+            child.material.color.setHex(colors.Z);
+          }
+        }
+        
+        // Hacer siempre visible (X-Ray)
+        child.material.depthTest = false;
+        child.material.depthWrite = false;
+        child.material.transparent = true;
+        child.material.opacity = 0.9;
+        child.renderOrder = 999;
+        
+        // Líneas más gruesas
+        if (child.isLine) {
+          child.material.linewidth = 5; // Nota: limitado en WebGL pero mejora en algunos browsers
+        }
+      }
+    });
+  }, 100);
+}
+
+// === MOVIMIENTO SUAVE (REDUCCIÓN DE SENSIBILIDAD) ===
+let lastPosition = new THREE.Vector3();
+let smoothVelocity = new THREE.Vector3();
+
+function applySmoothMovement() {
+  if (!transformControl.object || transformControl.mode !== 'translate') return;
+  
+  const currentPos = transformControl.object.position;
+  const delta = new THREE.Vector3().subVectors(currentPos, lastPosition);
+  
+  // Aplicar amortiguación
+  delta.multiplyScalar(CFG.dragSensitivity);
+  
+  // Actualizar posición suavizada
+  lastPosition.add(delta);
+  transformControl.object.position.copy(lastPosition);
+}
+
+// === ZOOM AUTOMÁTICO ===
+function autoZoomOnMove() {
+  if (!transformControl.object) return;
+  
+  const objPos = transformControl.object.position;
+  const distance = objPos.length();
+  
+  // Si el objeto se aleja, hacer zoom out progresivo
+  if (distance > CFG.autoZoomThreshold) {
+    const targetDistance = Math.min(
+      distance * 1.5,
+      CFG.maxAutoZoom
+    );
+    
+    // Interpolar suavemente
+    const currentDistance = camera.position.length();
+    const newDistance = THREE.MathUtils.lerp(currentDistance, targetDistance, 0.05);
+    
+    const direction = camera.position.clone().normalize();
+    camera.position.copy(direction.multiplyScalar(newDistance));
+    camera.lookAt(scene.position);
+  }
+}
+
+// === SISTEMA DE COTAS DINÁMICAS ===
+function showDimensionBubble() {
+  dimensionBubble.classList.add('visible');
+  updateDimensionBubble();
+}
+
+function hideDimensionBubble() {
+  dimensionBubble.classList.remove('visible');
+  isEditingDimension = false;
+}
+
+function updateDimensionBubble() {
+  if (!transformControl.object || !dimensionBubble.classList.contains('visible')) return;
+  
+  const obj = transformControl.object;
+  let value = 0;
+  let unit = 'm';
+  
+  if (transformControl.mode === 'translate') {
+    // Calcular distancia desde posición inicial
+    value = obj.position.distanceTo(initialPosition);
+    unit = 'm';
+  } else if (transformControl.mode === 'rotate') {
+    value = (obj.rotation.y * 180 / Math.PI) % 360;
+    unit = '°';
+  } else if (transformControl.mode === 'scale') {
+    value = obj.scale.x;
+    unit = 'x';
+  }
+  
+  dimensionValue.textContent = value.toFixed(2);
+  document.getElementById('dimension-unit').textContent = unit;
+  
+  // Posicionar burbuja cerca del objeto
+  positionDimensionBubble(obj);
+}
+
+function positionDimensionBubble(obj) {
+  const vector = obj.position.clone();
+  vector.project(camera);
+  
+  const x = (vector.x * 0.5 + 0.5) * window.innerWidth;
+  const y = (-(vector.y * 0.5) + 0.5) * window.innerHeight - 80;
+  
+  dimensionBubble.style.left = x + 'px';
+  dimensionBubble.style.top = y + 'px';
+}
+
+function setupDimensionEditor() {
+  editButton.addEventListener('click', () => {
+    if (!transformControl.object) return;
+    
+    // Convertir a input editable
+    const currentValue = parseFloat(dimensionValue.textContent);
+    const input = document.createElement('input');
+    input.type = 'number';
+    input.step = '0.1';
+    input.value = currentValue.toFixed(2);
+    input.id = 'dimension-input';
+    
+    dimensionValue.style.display = 'none';
+    dimensionBubble.insertBefore(input, document.getElementById('dimension-unit'));
+    input.focus();
+    input.select();
+    
+    input.addEventListener('blur', applyDimensionValue);
+    input.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') applyDimensionValue();
+    });
+  });
+}
+
+function applyDimensionValue() {
+  const input = document.getElementById('dimension-input');
+  if (!input || !transformControl.object) return;
+  
+  const newValue = parseFloat(input.value);
+  const obj = transformControl.object;
+  
+  if (transformControl.mode === 'translate') {
+    // Calcular nueva posición en la dirección actual
+    const direction = obj.position.clone().sub(initialPosition).normalize();
+    const newPos = initialPosition.clone().add(direction.multiplyScalar(newValue));
+    obj.position.copy(newPos);
+  } else if (transformControl.mode === 'scale') {
+    obj.scale.setScalar(Math.max(newValue, CFG.minScale));
+  }
+  
+  // Restaurar display
+  input.remove();
+  dimensionValue.style.display = 'inline';
+  updateDimensionBubble();
+  enforceLimits(obj);
+}
+
+// === JAULA DE SEGURIDAD ===
 function enforceLimits(obj) {
   if (!obj) return;
 
-  // 1. Limitar posición (Jaula de 8 metros)
-  // Si intenta irse más lejos, lo traemos de vuelta al borde
   if (obj.position.length() > CFG.maxDistance) {
     obj.position.setLength(CFG.maxDistance);
   }
 
-  // 2. Evitar que baje del suelo
   if (obj.position.y < 0) obj.position.y = 0;
 
-  // 3. Limitar Escala Mínima (Evita que desaparezca al invertir escala)
   obj.scale.x = Math.max(obj.scale.x, CFG.minScale);
   obj.scale.y = Math.max(obj.scale.y, CFG.minScale);
   obj.scale.z = Math.max(obj.scale.z, CFG.minScale);
+  
+  lastPosition.copy(obj.position);
 }
 
-// === LÓGICA TÁCTIL (DOBLE TAP) ===
+// === LÓGICA TÁCTIL ===
 function setupTouchEvents() {
   const canvas = renderer.domElement;
 
@@ -288,16 +530,12 @@ function setupTouchEvents() {
   });
 
   canvas.addEventListener('pointerup', (e) => {
-    // Si estamos interactuando con el gizmo, ignoramos clicks
     if (isGizmoInteracting) return;
     
-    // Calculamos desplazamiento
     const dist = Math.hypot(e.clientX - touchStartX, e.clientY - touchStartY);
 
-    // Si se movió menos de 10px, es un Tap limpio
     if (dist < 10) {
       const now = Date.now();
-      // Ventana de tiempo para doble tap: 400ms
       if (now - lastTapTime < 400) {
         handleDoubleTap(e.clientX, e.clientY);
         showTapEffect(e.clientX, e.clientY);
@@ -319,42 +557,28 @@ function handleDoubleTap(x, y) {
 
   if (intersects.length > 0) {
     const hit = intersects[0].object;
-    // Lógica Toggle: Si ya es el seleccionado, lo soltamos. Si no, lo agarramos.
     if (transformControl.object === hit) {
       detachGizmo();
-      msg("Edición terminada");
     } else {
       attachGizmo(hit);
     }
   } else {
-    // Doble tap en el vacío = Deseleccionar
     detachGizmo();
   }
 }
 
 function attachGizmo(obj) {
   transformControl.attach(obj);
+  lastPosition.copy(obj.position);
+  initialPosition.copy(obj.position);
   objects.forEach(o => { if(o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge); });
   if(obj.userData.edges) obj.userData.edges.material.color.setHex(CFG.selColor);
-  msg("Objeto Seleccionado");
 }
 
 function detachGizmo() {
   transformControl.detach();
   objects.forEach(o => { if(o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge); });
-}
-
-// === X-RAY GIZMO (SIEMPRE VISIBLE) ===
-function updateGizmoVisibility() {
-  if (transformControl && transformControl.object && transformControl.visible) {
-    transformControl.traverse((child) => {
-      if ((child.isMesh || child.isLine) && child.material) {
-        child.material.depthTest = false;
-        child.material.depthWrite = false;
-        child.renderOrder = 999;
-      }
-    });
-  }
+  hideDimensionBubble();
 }
 
 // === CREACIÓN ===
@@ -369,7 +593,6 @@ function spawn(type) {
 
   const mesh = new THREE.Mesh(geo, mat);
   mesh.castShadow = true; mesh.receiveShadow = true;
-  // Spawn seguro cerca del centro
   mesh.position.set((Math.random()-0.5)*2, 0.75, (Math.random()-0.5)*2);
 
   const edges = new THREE.LineSegments(
@@ -393,8 +616,9 @@ function setMode(mode) {
   const id = map[mode];
   if(id) document.getElementById(id).classList.add('active');
   
-  let txt = mode === 'translate' ? "Mover" : mode === 'rotate' ? "Rotar" : "Escalar";
-  msg("Herramienta: " + txt);
+  if(transformControl.object) {
+    initialPosition.copy(transformControl.object.position);
+  }
 }
 
 function setRenderMode(mode, btn) {
@@ -424,7 +648,6 @@ function del() {
     scene.remove(o);
     const idx = objects.indexOf(o);
     if(idx >= 0) objects.splice(idx, 1);
-    msg("Eliminado");
   }
 }
 
@@ -433,13 +656,6 @@ function randomColor() {
 }
 
 // === UTILS ===
-function msg(text) {
-  const t = document.getElementById('toast');
-  t.textContent = text;
-  t.style.opacity = 1;
-  setTimeout(() => t.style.opacity = 0, 2000);
-}
-
 function showTapEffect(x, y) {
   const el = document.createElement('div');
   el.className = 'tap-indicator';
@@ -473,10 +689,14 @@ function onResize() {
 function animate() {
   requestAnimationFrame(animate);
   orbit.update();
-  updateGizmoVisibility();
+  
+  // Mantener gizmo siempre visible y actualizar colores
+  if (transformControl.visible) {
+    customizeGizmo();
+  }
+  
   renderer.render(scene, camera);
 }
 </script>
 </body>
 </html>
-
