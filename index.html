@@ -3,92 +3,67 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0" />
-  <title>MR Studio Mobile - Gizmo Edition</title>
+  <title>MR Studio Mobile - Fixed Gizmos</title>
   <style>
-    body { margin: 0; background: #1a1a1a; overflow: hidden; font-family: 'Segoe UI', sans-serif; -webkit-user-select: none; user-select: none; touch-action: none; }
+    body { margin: 0; background: #111; overflow: hidden; font-family: sans-serif; -webkit-user-select: none; user-select: none; touch-action: none; }
     
-    /* PANTALLA DE INICIO */
     #overlay {
       position: absolute; inset: 0; display: flex; flex-direction: column;
       justify-content: center; align-items: center; background: rgba(0,0,0,0.95); z-index: 999;
-      transition: opacity 0.5s;
+      transition: opacity 0.4s;
     }
     
     button.start-btn {
-      padding: 20px 50px; font-size: 22px; background: #2b7fdb; border: none;
-      border-radius: 30px; font-weight: 700; cursor: pointer; color: white;
-      box-shadow: 0 6px 20px rgba(43,127,219,0.5);
+      padding: 15px 40px; font-size: 20px; background: #2b7fdb; border: none;
+      border-radius: 50px; color: white; font-weight: bold;
+      box-shadow: 0 0 20px rgba(43,127,219,0.4);
     }
-    button.start-btn:active { transform: scale(0.95); }
 
-    /* BARRA DE HERRAMIENTAS INFERIOR (Estilo App Nativa) */
+    /* UI INFERIOR FLOTANTE */
     #toolbar {
-      position: absolute; bottom: 25px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 12px; background: rgba(30, 30, 30, 0.95);
-      padding: 12px 25px; border-radius: 25px; border: 1px solid rgba(255,255,255,0.15);
-      backdrop-filter: blur(15px); z-index: 100; max-width: 95%; overflow-x: auto;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+      position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+      display: flex; gap: 8px; background: rgba(30, 30, 30, 0.9);
+      padding: 10px 20px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1);
+      backdrop-filter: blur(10px); z-index: 100;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.6);
     }
 
     .tool-btn {
-      width: 55px; height: 55px; border-radius: 14px; border: none;
-      background: #444; color: #ddd; font-size: 24px; cursor: pointer;
+      width: 50px; height: 50px; border-radius: 12px; border: none;
+      background: #444; color: #ddd; font-size: 22px;
       display: flex; flex-direction: column; align-items: center; justify-content: center;
-      transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1); flex-shrink: 0;
+      transition: 0.2s;
     }
-    .tool-btn:active { transform: scale(0.85); }
-    .tool-btn.active { background: #2b7fdb; color: white; box-shadow: 0 0 15px rgba(43,127,219,0.6); }
-    .tool-label { font-size: 9px; margin-top: 3px; font-weight: 600; text-transform: uppercase; }
+    .tool-btn:active { transform: scale(0.9); }
+    .tool-btn.active { background: #2b7fdb; color: white; border: 1px solid white; }
+    .label { font-size: 8px; margin-top: 2px; text-transform: uppercase; }
 
-    /* INFO PANEL SUPERIOR */
-    #info-panel {
-      position: absolute; top: 15px; left: 15px; pointer-events: none;
-      color: rgba(255,255,255,0.8); font-size: 13px; font-family: monospace;
-      background: rgba(0,0,0,0.5); padding: 5px 10px; border-radius: 8px;
+    #info {
+      position: absolute; top: 20px; width: 100%; text-align: center; pointer-events: none;
+      color: #888; font-size: 12px; text-shadow: 0 1px 2px black;
     }
-    
-    .delete-btn { background: #a32a2a !important; }
-    .create-group { background: #2a5fa3 !important; }
+    #sel-target { color: #2b7fdb; font-weight: bold; }
   </style>
 </head>
 <body>
 
 <div id="overlay">
-  <h1 style="color:#2b7fdb; margin:0; font-size: 3em;">MR STUDIO</h1>
-  <p style="color:#aaa; margin-bottom:40px; font-size: 1.2em;">Edición Táctil con Gizmos</p>
-  <button class="start-btn" id="btn-start">INICIAR APP</button>
+  <h1 style="color:#2b7fdb; font-size:40px; margin:0;">MR STUDIO</h1>
+  <p style="color:#666; margin-bottom:40px;">Modo Táctil Corregido</p>
+  <button class="start-btn" id="btn-start">EMPEZAR</button>
 </div>
 
-<div id="info-panel">
-  <div style="margin-bottom:4px;">Selección: <span id="sel-name" style="color:#2b7fdb; font-weight:bold;">Ninguna</span></div>
-  <div>Modo: <span id="mode-name" style="color:#aaa;">Navegación</span></div>
-</div>
+<div id="info">Seleccionado: <span id="sel-target">Nada</span></div>
 
 <div id="toolbar">
-  <button class="tool-btn create-group" onclick="spawnObject('box')">
-    📦<span class="tool-label">Cubo</span>
-  </button>
-  <button class="tool-btn create-group" onclick="spawnObject('sphere')">
-    ⚪<span class="tool-label">Esfera</span>
-  </button>
-  
-  <div style="width:2px; background:#555; margin:0 8px; border-radius: 2px;"></div>
-
-  <button class="tool-btn active" id="btn-trans" onclick="setTransformMode('translate')">
-    ↔️<span class="tool-label">Mover</span>
-  </button>
-  <button class="tool-btn" id="btn-rot" onclick="setTransformMode('rotate')">
-    🔄<span class="tool-label">Rotar</span>
-  </button>
-  <button class="tool-btn" id="btn-scale" onclick="setTransformMode('scale')">
-    📏<span class="tool-label">Escala</span>
-  </button>
-
-  <div style="width:2px; background:#555; margin:0 8px; border-radius: 2px;"></div>
-
-  <button class="tool-btn delete-btn" onclick="deleteSelected()">
-    🗑️<span class="tool-label">Borrar</span>
-  </button>
+  <button class="tool-btn" onclick="spawn('box')">📦<span class="label">Cubo</span></button>
+  <button class="tool-btn" onclick="spawn('sphere')">⚪<span class="label">Esfera</span></button>
+  <div style="width:1px; background:#666; margin:0 5px;"></div>
+  <button class="tool-btn active" id="btn-move" onclick="setMode('translate')">↔️<span class="label">Mover</span></button>
+  <button class="tool-btn" id="btn-rot" onclick="setMode('rotate')">🔄<span class="label">Rotar</span></button>
+  <button class="tool-btn" id="btn-scale" onclick="setMode('scale')">📏<span class="label">Escala</span></button>
+  <div style="width:1px; background:#666; margin:0 5px;"></div>
+  <button class="tool-btn" style="background:#a33" onclick="del()">🗑️<span class="label">Borrar</span></button>
 </div>
 
 <script type="importmap">
@@ -105,243 +80,180 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
-// ================= VARIABLES GLOBALES =================
-let scene, camera, renderer;
-let orbit, transformControl;
+let scene, camera, renderer, orbit, control;
 const objects = [];
-let raycaster, mouse;
-let isInteractingWithGizmo = false;
+const raycaster = new THREE.Raycaster();
+const mouse = new THREE.Vector2();
+
+// Variables para detectar "TAP" vs "DRAG"
+let touchStartTime = 0;
+let touchStartX = 0;
+let touchStartY = 0;
 
 init();
 animate();
 
 function init() {
-  // 1. ESCENA
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x1a1a1a);
-  scene.fog = new THREE.Fog(0x1a1a1a, 8, 40);
+  scene.background = new THREE.Color(0x111111);
+  scene.fog = new THREE.Fog(0x111111, 8, 30);
 
-  // 2. CÁMARA (Posición inicial elevada para ver mejor el grid)
-  camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
-  camera.position.set(4, 4, 6);
+  // Cámara centrada y un poco elevada
+  camera = new THREE.PerspectiveCamera(55, window.innerWidth/window.innerHeight, 0.1, 1000);
+  camera.position.set(3, 2.5, 4);
 
-  // 3. RENDERER (Optimizado para móviles)
   renderer = new THREE.WebGLRenderer({ antialias: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2)); // Límite de pixel ratio para rendimiento
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
   renderer.shadowMap.enabled = true;
-  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
 
-  // 4. LUCES
-  setupLights();
+  // Luces
+  const amb = new THREE.AmbientLight(0x404040, 1.5);
+  scene.add(amb);
+  const dir = new THREE.DirectionalLight(0xffffff, 2);
+  dir.position.set(5, 10, 5);
+  dir.castShadow = true;
+  scene.add(dir);
+  
+  const grid = new THREE.GridHelper(20, 40, 0x333333, 0x1a1a1a);
+  scene.add(grid);
 
-  // 5. GRID & HELPERS
-  const gridHelper = new THREE.GridHelper(30, 60, 0x444444, 0x222222);
-  scene.add(gridHelper);
-  const axesHelper = new THREE.AxesHelper(2);
-  scene.add(axesHelper);
-
-  // 6. CONTROLES DE CÁMARA (ORBIT) - Navegación con dedos
+  // Controles de Cámara (Orbit)
   orbit = new OrbitControls(camera, renderer.domElement);
   orbit.enableDamping = true;
-  orbit.dampingFactor = 0.08;
-  orbit.screenSpacePanning = false;
-  orbit.maxPolarAngle = Math.PI / 2.1; // No dejar que la cámara baje del suelo
-
-  // 7. CONTROLES DE TRANSFORMACIÓN (EL GIZMO TÁCTIL)
-  transformControl = new TransformControls(camera, renderer.domElement);
+  orbit.dampingFactor = 0.1;
   
-  // === CLAVE PARA MÓVIL: GIZMO GIGANTE ===
-  // Aumentamos el tamaño del gizmo para que sea fácil de tocar con el dedo.
-  transformControl.setSize(1.8); 
+  // === TRANSFORM CONTROLS (GIZMO) ===
+  control = new TransformControls(camera, renderer.domElement);
+  control.setSize(1.5); // Tamaño grande para dedos
+  control.space = 'local'; // Ejes alineados al objeto
   
-  // Eventos para evitar que la cámara se mueva mientras usamos el gizmo
-  transformControl.addEventListener('dragging-changed', function (event) {
-    isInteractingWithGizmo = event.value;
-    orbit.enabled = !isInteractingWithGizmo; // Desactiva la órbita si arrastramos el gizmo
+  // IMPORTANTE: Al interactuar con el Gizmo, desactivamos la cámara
+  control.addEventListener('dragging-changed', function (event) {
+    orbit.enabled = !event.value;
   });
   
-  scene.add(transformControl);
+  scene.add(control);
 
-  // 8. RAYCASTER (Para seleccionar objetos al tocar)
-  raycaster = new THREE.Raycaster();
-  mouse = new THREE.Vector2();
-
-  // ================= EVENTOS DEL SISTEMA =================
-  window.addEventListener('resize', onWindowResize);
+  // === LÓGICA DE TOQUE MEJORADA (Tap vs Drag) ===
+  // Usamos pointerdown/up para distinguir si el usuario solo tocó (seleccionar)
+  // o si movió el dedo (rotar cámara o mover gizmo)
   
-  // Usamos pointerdown para detectar el toque inicial
-  renderer.domElement.addEventListener('pointerdown', onPointerDown);
+  renderer.domElement.addEventListener('pointerdown', (e) => {
+    touchStartTime = Date.now();
+    touchStartX = e.clientX;
+    touchStartY = e.clientY;
+  });
 
-  // Botón de inicio
+  renderer.domElement.addEventListener('pointerup', (e) => {
+    const touchTime = Date.now() - touchStartTime;
+    const moveX = Math.abs(e.clientX - touchStartX);
+    const moveY = Math.abs(e.clientY - touchStartY);
+
+    // Si el dedo se movió menos de 5px y fue rápido (<300ms), es un CLICK/TAP
+    // Y IMPORTANTE: Solo seleccionamos si NO estamos arrastrando el Gizmo
+    if (moveX < 5 && moveY < 5 && touchTime < 300 && !control.dragging) {
+      checkSelection(e.clientX, e.clientY);
+    }
+  });
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth/window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+
   document.getElementById('btn-start').addEventListener('click', () => {
-    const overlay = document.getElementById('overlay');
-    overlay.style.opacity = 0;
-    setTimeout(() => overlay.style.display = 'none', 500);
-    // Crear un objeto inicial
-    window.spawnObject('box');
+    document.getElementById('overlay').style.opacity = 0;
+    setTimeout(() => document.getElementById('overlay').style.display = 'none', 400);
+    spawn('box');
   });
 
-  // Exponer funciones al ámbito global para que los botones HTML funcionen
-  window.spawnObject = spawnObject;
-  window.setTransformMode = setTransformMode;
-  window.deleteSelected = deleteSelected;
-
-  setTransformMode('translate'); // Modo inicial
+  // Exponer global
+  window.spawn = spawn;
+  window.setMode = setMode;
+  window.del = del;
 }
 
-function setupLights() {
-  const ambient = new THREE.AmbientLight(0x404040, 1); // Luz ambiental suave
-  scene.add(ambient);
-
-  const dirLight = new THREE.DirectionalLight(0xffffff, 1.8);
-  dirLight.position.set(5, 12, 8);
-  dirLight.castShadow = true;
-  // Sombras más nítidas
-  dirLight.shadow.mapSize.width = 2048;
-  dirLight.shadow.mapSize.height = 2048;
-  dirLight.shadow.camera.near = 0.5;
-  dirLight.shadow.camera.far = 50;
-  dirLight.shadow.bias = -0.0005;
-  
-  // Área de sombra
-  const d = 10;
-  dirLight.shadow.camera.left = -d;
-  dirLight.shadow.camera.right = d;
-  dirLight.shadow.camera.top = d;
-  dirLight.shadow.camera.bottom = -d;
-
-  scene.add(dirLight);
-}
-
-// ================= LÓGICA DE INTERACCIÓN TÁCTIL =================
-
-function onPointerDown(event) {
-  // Si ya estamos interactuando con el gizmo, ignorar este toque para selección
-  if (isInteractingWithGizmo) return;
-
-  // Calcular coordenadas normalizadas del toque (-1 a +1)
+function checkSelection(x, y) {
   const rect = renderer.domElement.getBoundingClientRect();
-  mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+  mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
 
-  // Lanzar rayo desde la cámara
   raycaster.setFromCamera(mouse, camera);
-  // Intersectar solo con nuestros objetos creados
   const intersects = raycaster.intersectObjects(objects, false);
 
   if (intersects.length > 0) {
-    // Se tocó un objeto
-    selectObject(intersects[0].object);
+    const obj = intersects[0].object;
+    if (control.object !== obj) {
+      attachGizmo(obj);
+    }
   } else {
-    // Se tocó el fondo, deseleccionar si no es un toque multitouch (zoom/pan)
-    if(event.isPrimary) selectObject(null);
+    // Si toca el fondo vacío, deselecciona
+    detachGizmo();
   }
 }
 
-function selectObject(object) {
-  // Restaurar el color de los objetos no seleccionados
-  objects.forEach(obj => {
-    if(obj.material.emissive) obj.material.emissive.setHex(0x000000);
-  });
-
-  if (object) {
-    // Conectar el GIZMO al objeto seleccionado
-    transformControl.attach(object);
-    
-    document.getElementById('sel-name').innerText = "Objeto Activo";
-    document.getElementById('sel-name').style.color = "#ffffff";
-    
-    // Feedback visual: hacer el objeto seleccionado más brillante
-    if(object.material.emissive) object.material.emissive.setHex(0x555555);
-    
-  } else {
-    // Desconectar el GIZMO (ocultarlo)
-    transformControl.detach();
-    document.getElementById('sel-name').innerText = "Ninguna";
-    document.getElementById('sel-name').style.color = "#2b7fdb";
-  }
+function attachGizmo(obj) {
+  control.attach(obj);
+  
+  // Feedback visual
+  objects.forEach(o => o.material.emissive.setHex(0x000000));
+  obj.material.emissive.setHex(0x333333);
+  
+  document.getElementById('sel-target').innerText = "Objeto Activo";
 }
 
-// ================= ACCIONES DE LA BARRA DE HERRAMIENTAS =================
+function detachGizmo() {
+  control.detach();
+  objects.forEach(o => o.material.emissive.setHex(0x000000));
+  document.getElementById('sel-target').innerText = "Nada";
+}
 
-function spawnObject(type) {
+function spawn(type) {
   let geo;
-  switch (type) {
-    case 'box': geo = new THREE.BoxGeometry(1.2, 1.2, 1.2); break;
-    case 'sphere': geo = new THREE.SphereGeometry(0.7, 32, 32); break;
-    default: geo = new THREE.BoxGeometry(1, 1, 1);
-  }
+  if(type==='box') geo = new THREE.BoxGeometry(1,1,1);
+  else geo = new THREE.SphereGeometry(0.6, 32, 32);
 
-  // Material PBR de alta calidad
   const mat = new THREE.MeshStandardMaterial({
     color: Math.random() * 0xffffff,
-    roughness: 0.4,
-    metalness: 0.2,
-    envMapIntensity: 0.5
+    roughness: 0.2, metalness: 0.3
   });
 
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
+  mesh.castShadow = true; mesh.receiveShadow = true;
+  mesh.position.set((Math.random()-0.5)*3, 0.5, (Math.random()-0.5)*3);
   
-  // Posición inicial aleatoria cerca del centro, sobre el suelo
-  mesh.position.set(
-    (Math.random() - 0.5) * 4,
-    0.6 + Math.random() * 0.5,
-    (Math.random() - 0.5) * 4
-  );
-
   scene.add(mesh);
   objects.push(mesh);
-  
-  // Seleccionar automáticamente el objeto nuevo
-  selectObject(mesh);
+  attachGizmo(mesh);
 }
 
-function setTransformMode(mode) {
-  // Cambiar el modo del GIZMO (esto cambia las flechas por anillos o cubos)
-  transformControl.setMode(mode);
-  
-  // Actualizar la UI de los botones
+function setMode(mode) {
+  control.setMode(mode);
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-  if(mode === 'translate') document.getElementById('btn-trans').classList.add('active');
+  if(mode === 'translate') document.getElementById('btn-move').classList.add('active');
   if(mode === 'rotate') document.getElementById('btn-rot').classList.add('active');
   if(mode === 'scale') document.getElementById('btn-scale').classList.add('active');
-  
-  let label = "";
-  if(mode === 'translate') label = "MOVER (Ejes)";
-  if(mode === 'rotate') label = "ROTAR (Ejes)";
-  if(mode === 'scale') label = "ESCALAR (Ejes)";
-  document.getElementById('mode-name').innerText = label;
 }
 
-function deleteSelected() {
-  const obj = transformControl.object;
-  if (!obj) return; // No hay nada seleccionado
-  
-  transformControl.detach(); // Quitar el gizmo primero
-  scene.remove(obj); // Quitar de la escena
-  
-  // Quitar de nuestro array de objetos
-  const index = objects.indexOf(obj);
-  if (index > -1) objects.splice(index, 1);
-  
-  selectObject(null);
-}
-
-function onWindowResize() {
-  camera.aspect = window.innerWidth / window.innerHeight;
-  camera.updateProjectionMatrix();
-  renderer.setSize(window.innerWidth, window.innerHeight);
+function del() {
+  if (control.object) {
+    const o = control.object;
+    control.detach();
+    scene.remove(o);
+    objects.splice(objects.indexOf(o), 1);
+    document.getElementById('sel-target').innerText = "Nada";
+  }
 }
 
 function animate() {
   requestAnimationFrame(animate);
-  orbit.update(); // Necesario para la inercia suave de la cámara
+  orbit.update();
   renderer.render(scene, camera);
 }
 </script>
 </body>
 </html>
+
