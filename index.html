@@ -5,15 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover" />
   <title>MR Studio - Clear Gizmo</title>
   <style>
-    /* === UI APPLE STYLE === */
     body { 
       margin: 0; background: #f2f2f7; overflow: hidden; 
       font-family: -apple-system, "SF Pro Text", sans-serif;
       -webkit-user-select: none; user-select: none; touch-action: none; 
       color: #1c1c1e;
     }
-    
-    /* Pantalla de Carga */
     #overlay {
       position: absolute; inset: 0; display: flex; flex-direction: column;
       justify-content: center; align-items: center; 
@@ -22,7 +19,6 @@
     }
     h1 { font-weight: 800; font-size: 32px; margin: 0 0 10px 0; letter-spacing: -1px; }
     p { color: #8e8e93; margin: 0 0 40px 0; font-weight: 500; }
-    
     button.start-btn {
       padding: 16px 48px; font-size: 18px; 
       background: #FF9500; border: none; border-radius: 40px; 
@@ -32,7 +28,6 @@
     }
     button.start-btn:active { transform: scale(0.96); }
 
-    /* Barra Superior */
     #render-bar {
       position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
       display: flex; background: rgba(255, 255, 255, 0.85);
@@ -48,7 +43,6 @@
     }
     .render-opt.active { background: #fff; color: #000; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
 
-    /* Dock Inferior */
     #toolbar-container {
       position: absolute; bottom: 35px; left: 0; right: 0;
       display: flex; justify-content: center; pointer-events: none; z-index: 100;
@@ -73,7 +67,6 @@
     .label { font-size: 9px; margin-top: 3px; font-weight: 700; opacity: 0.7; }
     .divider { width: 1px; background: rgba(0,0,0,0.1); margin: 0 4px; flex-shrink: 0; }
 
-    /* LEYENDA DE EJES */
     #axis-legend {
       position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%);
       display: flex; gap: 15px; font-size: 10px; font-weight: 700;
@@ -99,9 +92,9 @@
 </div>
 
 <div id="render-bar">
-  <button class="render-opt active" onclick="setRenderMode('flat', event)">Plano</button>
-  <button class="render-opt" onclick="setRenderMode('lightmap', event)">Clay</button>
-  <button class="render-opt" onclick="setRenderMode('workbench', event)">Tech</button>
+  <button class="render-opt active" onclick="setRenderMode('flat', this)">Plano</button>
+  <button class="render-opt" onclick="setRenderMode('lightmap', this)">Clay</button>
+  <button class="render-opt" onclick="setRenderMode('workbench', this)">Tech</button>
 </div>
 
 <div id="axis-legend">
@@ -141,17 +134,15 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
-// === CONFIGURACIÓN ===
 const CFG = {
   bg: 0xf2f2f7,
-  objColor: 0xdbe4eb, 
+  objColor: 0xdbe4eb,
   objEdge: 0xffffff,
-  selColor: 0xFF9500 
+  selColor: 0xFF9500
 };
 
 let scene, camera, renderer, orbit;
-let controlT, controlR, controlS; // translate / rotate / scale
-let activeMode = 'translate';
+let controlT, controlR, controlS;
 
 const objects = [];
 const raycaster = new THREE.Raycaster();
@@ -181,7 +172,6 @@ function init() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
 
-  // Luces
   scene.add(new THREE.HemisphereLight(0xffffff, 0xffffff, 0.7));
   const dir = new THREE.DirectionalLight(0xffffff, 1.2);
   dir.position.set(5, 12, 8);
@@ -189,12 +179,11 @@ function init() {
   dir.shadow.mapSize.set(2048, 2048);
   scene.add(dir);
 
-  // GRID & AXES
   const grid = new THREE.GridHelper(50, 50, 0xc7c7cc, 0xe5e5ea);
   scene.add(grid);
 
+  // Axes helper SAFE (sin reventar por material raro)
   const globalAxes = new THREE.AxesHelper(2);
-  globalAxes.material.depthTest = false;
   globalAxes.renderOrder = 1;
   scene.add(globalAxes);
 
@@ -205,7 +194,7 @@ function init() {
   orbit.dampingFactor = 0.05;
   orbit.maxPolarAngle = Math.PI / 2 - 0.05;
 
-  // === 3 GIZMOS (Mover / Rotar / Escalar) + "Todos" ===
+  // 3 gizmos (move/rotate/scale) + "all"
   controlT = new TransformControls(camera, renderer.domElement);
   controlR = new TransformControls(camera, renderer.domElement);
   controlS = new TransformControls(camera, renderer.domElement);
@@ -214,7 +203,6 @@ function init() {
   controlR.setMode('rotate');
   controlS.setMode('scale');
 
-  // Jumbo
   controlT.setSize(3.0);
   controlR.setSize(3.0);
   controlS.setSize(3.0);
@@ -223,16 +211,15 @@ function init() {
   controlR.space = 'local';
   controlS.space = 'local';
 
-  const onDraggingChanged = (event) => {
-    orbit.enabled = !event.value;
-    isGizmoInteracting = event.value;
+  const onDraggingChanged = (e) => {
+    orbit.enabled = !e.value;
+    isGizmoInteracting = e.value;
   };
 
   controlT.addEventListener('dragging-changed', onDraggingChanged);
   controlR.addEventListener('dragging-changed', onDraggingChanged);
   controlS.addEventListener('dragging-changed', onDraggingChanged);
 
-  // Default: solo mover visible
   controlT.visible = true;
   controlR.visible = false;
   controlS.visible = false;
@@ -253,7 +240,7 @@ function init() {
     spawn('box');
   });
 
-  // Globales
+  // IMPORTANTÍSIMO: exponer funciones a los botones HTML
   window.spawn = spawn;
   window.setMode = setMode;
   window.del = del;
@@ -261,28 +248,24 @@ function init() {
   window.randomColor = randomColor;
 }
 
-// === HACK DE VISIBILIDAD "X-RAY" PARA GIZMOS ===
 function updateGizmoVisibility() {
   const controls = [controlT, controlR, controlS];
   controls.forEach((ctrl) => {
     if (ctrl && ctrl.object && ctrl.visible) {
       ctrl.traverse((child) => {
-        if (child.isMesh || child.isLine) {
-          if (child.material) {
-            child.material.depthTest = false;
-            child.material.depthWrite = false;
-            child.renderOrder = 999;
-          }
+        if ((child.isMesh || child.isLine) && child.material) {
+          child.material.depthTest = false;
+          child.material.depthWrite = false;
+          child.renderOrder = 999;
         }
       });
     }
   });
 }
 
-// === OBJETOS ===
 function spawn(type) {
   let geo;
-  if(type === 'box') geo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+  if (type === 'box') geo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
   else geo = new THREE.SphereGeometry(0.9, 48, 48);
 
   const mat = new THREE.MeshStandardMaterial({
@@ -290,7 +273,8 @@ function spawn(type) {
   });
 
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.castShadow = true; mesh.receiveShadow = true;
+  mesh.castShadow = true; 
+  mesh.receiveShadow = true;
   mesh.position.set((Math.random()-0.5)*4, 0.75, (Math.random()-0.5)*4);
 
   const edges = new THREE.LineSegments(
@@ -306,7 +290,6 @@ function spawn(type) {
   attachGizmo(mesh);
 }
 
-// === INPUT ===
 function setupTouchEvents() {
   const canvas = renderer.domElement;
 
@@ -336,9 +319,10 @@ function checkSelection(x, y) {
   const rect = renderer.domElement.getBoundingClientRect();
   mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
   mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
-  raycaster.setFromCamera(mouse, camera);
 
+  raycaster.setFromCamera(mouse, camera);
   const intersects = raycaster.intersectObjects(objects, false);
+
   if (intersects.length > 0) attachGizmo(intersects[0].object);
   else detachGizmo();
 }
@@ -348,8 +332,8 @@ function attachGizmo(obj) {
   controlR.attach(obj);
   controlS.attach(obj);
 
-  objects.forEach(o => { if(o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge); });
-  if(obj.userData.edges) obj.userData.edges.material.color.setHex(CFG.selColor);
+  objects.forEach(o => { if (o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge); });
+  if (obj.userData.edges) obj.userData.edges.material.color.setHex(CFG.selColor);
 
   msg("Objeto seleccionado");
 }
@@ -358,20 +342,20 @@ function detachGizmo() {
   controlT.detach();
   controlR.detach();
   controlS.detach();
-  objects.forEach(o => { if(o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge); });
+  objects.forEach(o => { if (o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge); });
 }
 
-// === UTILS ===
-function setRenderMode(mode, ev) {
+function setRenderMode(mode, btnEl) {
   currentRenderMode = mode;
   document.querySelectorAll('.render-opt').forEach(b => b.classList.remove('active'));
-  if (ev?.target) ev.target.classList.add('active');
+  if (btnEl) btnEl.classList.add('active');
   objects.forEach(o => applyRenderMode(o, mode));
 }
 
 function applyRenderMode(mesh, mode) {
   const m = mesh.material;
   const e = mesh.userData.edges;
+
   if (mode === 'flat') {
     m.map = null; m.roughness = 0.4; m.color.setHex(CFG.objColor); if(e) e.visible = true;
   } else if (mode === 'lightmap') {
@@ -383,8 +367,6 @@ function applyRenderMode(mesh, mode) {
 }
 
 function setMode(mode) {
-  activeMode = mode;
-
   if (mode === 'translate') {
     controlT.visible = true;  controlR.visible = false; controlS.visible = false;
   } else if (mode === 'rotate') {
@@ -398,7 +380,8 @@ function setMode(mode) {
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
   const map = {translate:'btn-move', rotate:'btn-rot', scale:'btn-scale', all:'btn-all'};
   const id = map[mode];
-  if (id && document.getElementById(id)) document.getElementById(id).classList.add('active');
+  const btn = document.getElementById(id);
+  if (btn) btn.classList.add('active');
 
   const label = (mode === 'all') ? 'Mover + Rotar + Escalar' :
                 (mode === 'translate') ? 'Mover' :
@@ -407,33 +390,34 @@ function setMode(mode) {
 }
 
 function del() {
-  if(controlT.object) {
+  if (controlT.object) {
     const o = controlT.object;
     detachGizmo();
     scene.remove(o);
-    objects.splice(objects.indexOf(o), 1);
+    const idx = objects.indexOf(o);
+    if (idx >= 0) objects.splice(idx, 1);
     msg("Eliminado");
   }
 }
 
 function randomColor() {
-  if(controlT.object) controlT.object.material.color.setHex(Math.random() * 0xffffff);
+  if (controlT.object) controlT.object.material.color.setHex(Math.random() * 0xffffff);
 }
 
 function msg(text) {
   const t = document.getElementById('toast');
   t.textContent = text;
   t.style.opacity = 1;
-  setTimeout(()=> t.style.opacity=0, 2000);
+  setTimeout(() => t.style.opacity = 0, 2000);
 }
 
 function createTechTexture() {
   const c = document.createElement('canvas'); c.width = 512; c.height = 512;
   const ctx = c.getContext('2d');
   ctx.fillStyle = '#f0f0f5'; ctx.fillRect(0,0,512,512);
-  ctx.strokeStyle = '#d1d1d6'; ctx.lineWidth=2;
+  ctx.strokeStyle = '#d1d1d6'; ctx.lineWidth = 2;
   ctx.beginPath();
-  for(let i=0;i<=512;i+=64){
+  for (let i=0; i<=512; i+=64) {
     ctx.moveTo(i,0); ctx.lineTo(i,512);
     ctx.moveTo(0,i); ctx.lineTo(512,i);
   }
@@ -443,7 +427,7 @@ function createTechTexture() {
   return t;
 }
 
-function onResize(){
+function onResize() {
   camera.aspect = window.innerWidth/window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
