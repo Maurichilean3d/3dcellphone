@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover" />
-  <title>MR Studio Elite</title>
+  <title>MR Studio Final</title>
   <style>
     /* === ESTILOS UI (APPLE STYLE) === */
     body { 
@@ -109,6 +109,66 @@
       background: rgba(255, 149, 0, 0.9);
     }
     
+    /* === POP-UP DE CONFIRMACIÓN === */
+    #confirm-dialog {
+      position: absolute;
+      bottom: 150px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 255, 255, 0.98);
+      backdrop-filter: blur(20px);
+      padding: 20px 24px;
+      border-radius: 24px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      z-index: 300;
+      display: none;
+      flex-direction: column;
+      gap: 12px;
+      min-width: 280px;
+    }
+    
+    #confirm-dialog.visible {
+      display: flex;
+    }
+    
+    #confirm-dialog h3 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 700;
+      text-align: center;
+      color: #1c1c1e;
+    }
+    
+    #confirm-dialog .buttons {
+      display: flex;
+      gap: 12px;
+    }
+    
+    #confirm-dialog button {
+      flex: 1;
+      padding: 14px;
+      border: none;
+      border-radius: 14px;
+      font-weight: 600;
+      font-size: 15px;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    
+    #confirm-dialog .btn-continue {
+      background: #FF9500;
+      color: white;
+    }
+    
+    #confirm-dialog .btn-finish {
+      background: #34C759;
+      color: white;
+    }
+    
+    #confirm-dialog button:active {
+      transform: scale(0.96);
+    }
+    
     #distance-input-dialog {
       position: absolute;
       top: 50%;
@@ -177,8 +237,8 @@
 <body>
 
 <div id="overlay">
-  <h1>MR STUDIO ELITE</h1>
-  <p>Gizmo Visual • Medición Dinámica • Zoom Inteligente</p>
+  <h1>MR STUDIO FINAL</h1>
+  <p>Flechas 3D Visibles • Objeto Naranja • Pop-up Confirmación</p>
   <button class="start-btn" id="btn-start">Comenzar</button>
 </div>
 
@@ -201,6 +261,14 @@
 </svg>
 
 <div id="distance-label">0.00 m</div>
+
+<div id="confirm-dialog">
+  <h3>¿Qué deseas hacer?</h3>
+  <div class="buttons">
+    <button class="btn-continue" onclick="continueMoving()">Continuar Moviendo</button>
+    <button class="btn-finish" onclick="finishMoving()">Terminar</button>
+  </div>
+</div>
 
 <div id="distance-input-dialog">
   <h3>Distancia de Desplazamiento</h3>
@@ -235,7 +303,6 @@
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
 // === CONFIGURACIÓN ===
 const CFG = {
@@ -243,38 +310,49 @@ const CFG = {
   objColor: 0xdbe4eb,
   objEdge: 0xffffff,
   selColor: 0xFF9500,
+  selColorLight: 0xFFB84D,
   maxDistance: 20.0,
   minScale: 0.05,
-  gizmoSize: 5.0,           // Gizmo GIGANTE
-  movementSpeed: 0.08,      // Velocidad ultra-suave
-  zoomSensitivity: 0.15,    // Sensibilidad del zoom adaptativo
+  arrowSize: 2.5,          // Tamaño de flechas
+  movementSpeed: 0.08,
+  zoomSensitivity: 0.15,
   minZoom: 3,
   maxZoom: 30
 };
 
-let scene, camera, renderer, orbit, transformControl;
+let scene, camera, renderer, orbit;
 const objects = [];
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
 let currentRenderMode = 'flat';
 let gridTexture = null;
 
+// Sistema de Flechas 3D
+let arrowHelpers = null;
+let selectedObject = null;
+let activeArrow = null;
+
 // Touch Logic
 let lastTapTime = 0;
 let touchStartX = 0, touchStartY = 0;
-let isGizmoInteracting = false;
 let isDragging = false;
+let dragStartPos = new THREE.Vector2();
 
 // Sistema de Medición
 let originPosition = new THREE.Vector3();
 let currentDistance = 0;
 const measurementLine = document.getElementById('measurement-line');
 const distanceLabel = document.getElementById('distance-label');
+const confirmDialog = document.getElementById('confirm-dialog');
 const distanceInputDialog = document.getElementById('distance-input-dialog');
 
 // Zoom Inteligente
 let initialCameraDistance = 0;
 let maxDragDistance = 0;
+
+// Estado de manipulación
+let isManipulating = false;
+let manipulationTimer = null;
 
 init();
 animate();
@@ -302,10 +380,6 @@ function init() {
   dir.position.set(5, 15, 10);
   dir.castShadow = true;
   dir.shadow.mapSize.set(2048, 2048);
-  dir.shadow.camera.left = -20;
-  dir.shadow.camera.right = 20;
-  dir.shadow.camera.top = 20;
-  dir.shadow.camera.bottom = -20;
   scene.add(dir);
 
   // Grid
@@ -328,50 +402,6 @@ function init() {
   orbit.minDistance = CFG.minZoom;
   orbit.maxDistance = CFG.maxZoom;
 
-  // Transform Controls - GIZMO GIGANTE ESTILO FLECHAS
-  transformControl = new TransformControls(camera, renderer.domElement);
-  transformControl.setSize(CFG.gizmoSize);
-  transformControl.space = 'world';
-  transformControl.showX = true;
-  transformControl.showY = true;
-  transformControl.showZ = true;
-  
-  // Personalizar Gizmo
-  customizeArrowGizmo();
-  
-  // === GESTIÓN DE EVENTOS ===
-  transformControl.addEventListener('dragging-changed', (event) => {
-    orbit.enabled = !event.value;
-    isGizmoInteracting = event.value;
-    isDragging = event.value;
-    
-    if(event.value) {
-      // Inicio del arrastre
-      if(transformControl.object) {
-        originPosition.copy(transformControl.object.position);
-        initialCameraDistance = camera.position.length();
-        maxDragDistance = 0;
-      }
-      showMeasurementLine();
-    } else {
-      // Fin del arrastre
-      hideMeasurementLine();
-      enforceLimits(transformControl.object);
-    }
-  });
-
-  // Listener para movimiento
-  transformControl.addEventListener('objectChange', () => {
-    if (transformControl.object && transformControl.mode === 'translate') {
-      applySmoothMovement();
-      enforceLimits(transformControl.object);
-      updateMeasurementLine();
-      updateIntelligentZoom();
-    }
-  });
-
-  scene.add(transformControl);
-
   window.addEventListener('resize', onResize);
   setupTouchEvents();
   setupDistanceInput();
@@ -393,77 +423,346 @@ function init() {
   window.randomColor = randomColor;
   window.applyDistance = applyDistance;
   window.closeDistanceDialog = closeDistanceDialog;
+  window.continueMoving = continueMoving;
+  window.finishMoving = finishMoving;
 }
 
-// === PERSONALIZACIÓN DEL GIZMO (ESTILO FLECHAS) ===
-function customizeArrowGizmo() {
-  setTimeout(() => {
-    transformControl.traverse((child) => {
-      if (child.material) {
-        // Colores brillantes por eje
-        if (child.name.includes('X')) {
-          child.material.color.setHex(0xFF3B30); // Rojo
-        } else if (child.name.includes('Y')) {
-          child.material.color.setHex(0x34C759); // Verde
-        } else if (child.name.includes('Z')) {
-          child.material.color.setHex(0x007AFF); // Azul
-        }
-        
-        // Siempre visible (X-Ray)
-        child.material.depthTest = false;
-        child.material.depthWrite = false;
-        child.material.transparent = true;
-        child.material.opacity = 0.95;
-        child.renderOrder = 999;
-        
-        // Líneas más gruesas
-        if (child.isLine && child.material) {
-          child.material.linewidth = 8;
-        }
-        
-        // Aumentar escala de flechas
-        if (child.isMesh) {
-          child.scale.multiplyScalar(1.5);
-        }
+// === CREAR FLECHAS 3D ===
+function createArrowHelpers(targetObject) {
+  if (arrowHelpers) {
+    scene.remove(arrowHelpers);
+  }
+
+  arrowHelpers = new THREE.Group();
+  arrowHelpers.name = 'ArrowHelpers';
+
+  const arrowLength = CFG.arrowSize;
+  const arrowHeadLength = 0.6;
+  const arrowHeadWidth = 0.4;
+
+  // Flecha X (Roja)
+  const arrowX = new THREE.ArrowHelper(
+    new THREE.Vector3(1, 0, 0),
+    new THREE.Vector3(0, 0, 0),
+    arrowLength,
+    0xFF3B30,
+    arrowHeadLength,
+    arrowHeadWidth
+  );
+  arrowX.name = 'ArrowX';
+  arrowX.userData.axis = 'x';
+  arrowX.line.material.linewidth = 5;
+  
+  // Flecha Y (Verde)
+  const arrowY = new THREE.ArrowHelper(
+    new THREE.Vector3(0, 1, 0),
+    new THREE.Vector3(0, 0, 0),
+    arrowLength,
+    0x34C759,
+    arrowHeadLength,
+    arrowHeadWidth
+  );
+  arrowY.name = 'ArrowY';
+  arrowY.userData.axis = 'y';
+  arrowY.line.material.linewidth = 5;
+  
+  // Flecha Z (Azul)
+  const arrowZ = new THREE.ArrowHelper(
+    new THREE.Vector3(0, 0, 1),
+    new THREE.Vector3(0, 0, 0),
+    arrowLength,
+    0x007AFF,
+    arrowHeadLength,
+    arrowHeadWidth
+  );
+  arrowZ.name = 'ArrowZ';
+  arrowZ.userData.axis = 'z';
+  arrowZ.line.material.linewidth = 5;
+
+  // Centro para movimiento libre (esfera blanca)
+  const centerGeo = new THREE.SphereGeometry(0.3, 16, 16);
+  const centerMat = new THREE.MeshBasicMaterial({ 
+    color: 0xFFFFFF, 
+    transparent: true, 
+    opacity: 0.8,
+    depthTest: false
+  });
+  const centerSphere = new THREE.Mesh(centerGeo, centerMat);
+  centerSphere.name = 'CenterSphere';
+  centerSphere.userData.axis = 'free';
+  centerSphere.renderOrder = 999;
+
+  arrowHelpers.add(arrowX);
+  arrowHelpers.add(arrowY);
+  arrowHelpers.add(arrowZ);
+  arrowHelpers.add(centerSphere);
+
+  // Hacer todos los elementos siempre visibles (X-Ray)
+  arrowHelpers.traverse((child) => {
+    if (child.material) {
+      child.material.depthTest = false;
+      child.material.depthWrite = false;
+      child.renderOrder = 999;
+    }
+  });
+
+  arrowHelpers.position.copy(targetObject.position);
+  scene.add(arrowHelpers);
+  
+  return arrowHelpers;
+}
+
+function hideArrows() {
+  if (arrowHelpers) {
+    arrowHelpers.visible = false;
+  }
+}
+
+function showArrows() {
+  if (arrowHelpers) {
+    arrowHelpers.visible = true;
+  }
+}
+
+function removeArrows() {
+  if (arrowHelpers) {
+    scene.remove(arrowHelpers);
+    arrowHelpers = null;
+  }
+}
+
+// === LÓGICA TÁCTIL ===
+function setupTouchEvents() {
+  const canvas = renderer.domElement;
+
+  canvas.addEventListener('pointerdown', (e) => {
+    touchStartX = e.clientX; 
+    touchStartY = e.clientY;
+    dragStartPos.set(e.clientX, e.clientY);
+    
+    // Verificar si tocó una flecha
+    if (selectedObject && arrowHelpers) {
+      const arrow = getIntersectedArrow(e.clientX, e.clientY);
+      if (arrow) {
+        activeArrow = arrow;
+        isDragging = true;
+        isManipulating = true;
+        orbit.enabled = false; // BLOQUEAR CÁMARA
+        originPosition.copy(selectedObject.position);
+        initialCameraDistance = camera.position.length();
+        maxDragDistance = 0;
+        hideArrows(); // OCULTAR FLECHAS AL ARRASTRAR
+        showMeasurementLine();
       }
-    });
-  }, 100);
+    }
+  });
+
+  canvas.addEventListener('pointermove', (e) => {
+    if (isDragging && selectedObject && activeArrow) {
+      moveObjectWithArrow(e.clientX, e.clientY);
+    }
+  });
+
+  canvas.addEventListener('pointerup', (e) => {
+    const dist = Math.hypot(e.clientX - touchStartX, e.clientY - touchStartY);
+
+    if (isDragging) {
+      // Terminó de arrastrar
+      isDragging = false;
+      activeArrow = null;
+      hideMeasurementLine();
+      showArrows(); // MOSTRAR FLECHAS AL SOLTAR
+      
+      // Mostrar pop-up después de un momento
+      clearTimeout(manipulationTimer);
+      manipulationTimer = setTimeout(() => {
+        showConfirmDialog();
+      }, 300);
+      
+    } else if (dist < 15) {
+      // Es un tap
+      const now = Date.now();
+      if (now - lastTapTime < 400) {
+        handleDoubleTap(e.clientX, e.clientY);
+        showTapEffect(e.clientX, e.clientY);
+        lastTapTime = 0;
+      } else {
+        lastTapTime = now;
+      }
+    }
+  });
 }
 
-// === MOVIMIENTO SUAVE ===
-let lastPosition = new THREE.Vector3();
+function getIntersectedArrow(x, y) {
+  if (!arrowHelpers) return null;
 
-function applySmoothMovement() {
-  if (!transformControl.object || transformControl.mode !== 'translate') return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
   
-  const currentPos = transformControl.object.position;
-  const delta = new THREE.Vector3().subVectors(currentPos, lastPosition);
+  const arrowObjects = [];
+  arrowHelpers.traverse((child) => {
+    if (child.isMesh || child.isLine) {
+      arrowObjects.push(child);
+    }
+  });
   
-  // Aplicar velocidad reducida
-  delta.multiplyScalar(CFG.movementSpeed);
+  const intersects = raycaster.intersectObjects(arrowObjects, true);
   
-  lastPosition.add(delta);
-  transformControl.object.position.copy(lastPosition);
+  if (intersects.length > 0) {
+    let obj = intersects[0].object;
+    while (obj.parent && obj.parent !== arrowHelpers) {
+      obj = obj.parent;
+    }
+    return obj;
+  }
+  
+  return null;
 }
 
-// === ZOOM INTELIGENTE ADAPTATIVO ===
+function moveObjectWithArrow(x, y) {
+  if (!selectedObject || !activeArrow) return;
+
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
+
+  const axis = activeArrow.userData.axis;
+  const movementScale = 0.05;
+
+  if (axis === 'x') {
+    selectedObject.position.x += (x - dragStartPos.x) * movementScale;
+  } else if (axis === 'y') {
+    selectedObject.position.y -= (y - dragStartPos.y) * movementScale;
+  } else if (axis === 'z') {
+    selectedObject.position.z += (y - dragStartPos.y) * movementScale;
+  } else if (axis === 'free') {
+    // Movimiento libre en plano XZ
+    const deltaX = (x - dragStartPos.x) * movementScale;
+    const deltaZ = (y - dragStartPos.y) * movementScale;
+    selectedObject.position.x += deltaX;
+    selectedObject.position.z += deltaZ;
+  }
+
+  dragStartPos.set(x, y);
+  
+  enforceLimits(selectedObject);
+  updateArrowPosition();
+  updateMeasurementLine();
+  updateIntelligentZoom();
+}
+
+function updateArrowPosition() {
+  if (arrowHelpers && selectedObject) {
+    arrowHelpers.position.copy(selectedObject.position);
+  }
+}
+
+function handleDoubleTap(x, y) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(objects, false);
+
+  if (intersects.length > 0) {
+    const hit = intersects[0].object;
+    if (selectedObject === hit) {
+      deselectObject();
+    } else {
+      selectObject(hit);
+    }
+  } else {
+    deselectObject();
+  }
+}
+
+function selectObject(obj) {
+  // Deseleccionar anterior
+  if (selectedObject) {
+    deselectObject();
+  }
+  
+  selectedObject = obj;
+  isManipulating = true;
+  
+  // OBJETO NARANJA COMPLETO
+  obj.material.color.setHex(CFG.selColor);
+  if (obj.userData.edges) {
+    obj.userData.edges.material.color.setHex(CFG.selColorLight);
+    obj.userData.edges.material.opacity = 0.8;
+  }
+  
+  // CREAR FLECHAS
+  createArrowHelpers(obj);
+  
+  // BLOQUEAR ÓRBITA
+  orbit.enabled = false;
+  
+  originPosition.copy(obj.position);
+  initialCameraDistance = camera.position.length();
+}
+
+function deselectObject() {
+  if (selectedObject) {
+    // Restaurar color original
+    selectedObject.material.color.setHex(CFG.objColor);
+    if (selectedObject.userData.edges) {
+      selectedObject.userData.edges.material.color.setHex(CFG.objEdge);
+      selectedObject.userData.edges.material.opacity = 0.5;
+    }
+    
+    selectedObject = null;
+  }
+  
+  removeArrows();
+  hideMeasurementLine();
+  hideConfirmDialog();
+  isManipulating = false;
+  
+  // REACTIVAR ÓRBITA
+  orbit.enabled = true;
+}
+
+// === POP-UP DE CONFIRMACIÓN ===
+function showConfirmDialog() {
+  confirmDialog.classList.add('visible');
+}
+
+function hideConfirmDialog() {
+  confirmDialog.classList.remove('visible');
+}
+
+function continueMoving() {
+  hideConfirmDialog();
+  if (selectedObject) {
+    originPosition.copy(selectedObject.position);
+    showArrows();
+  }
+}
+
+function finishMoving() {
+  hideConfirmDialog();
+  deselectObject();
+}
+
+// === ZOOM INTELIGENTE ===
 function updateIntelligentZoom() {
-  if (!transformControl.object || !isDragging) return;
+  if (!selectedObject || !isDragging) return;
   
-  const objPos = transformControl.object.position;
+  const objPos = selectedObject.position;
   const distance = objPos.distanceTo(originPosition);
   
-  // Actualizar máxima distancia alcanzada
   maxDragDistance = Math.max(maxDragDistance, distance);
   
-  // Calcular zoom objetivo basado en la distancia
   let targetZoom;
   
   if (distance > maxDragDistance * 0.5) {
-    // Alejándose del origen → Zoom OUT
     targetZoom = initialCameraDistance + (distance * 2);
   } else {
-    // Acercándose al origen → Zoom IN
     const returnRatio = distance / maxDragDistance;
     targetZoom = THREE.MathUtils.lerp(
       initialCameraDistance,
@@ -472,10 +771,8 @@ function updateIntelligentZoom() {
     );
   }
   
-  // Limitar zoom
   targetZoom = THREE.MathUtils.clamp(targetZoom, CFG.minZoom, CFG.maxZoom);
   
-  // Aplicar zoom suave
   const currentZoom = camera.position.length();
   const newZoom = THREE.MathUtils.lerp(currentZoom, targetZoom, CFG.zoomSensitivity);
   
@@ -485,7 +782,7 @@ function updateIntelligentZoom() {
   camera.lookAt(objPos);
 }
 
-// === SISTEMA DE MEDICIÓN VISUAL ===
+// === SISTEMA DE MEDICIÓN ===
 function showMeasurementLine() {
   measurementLine.classList.add('visible');
   distanceLabel.classList.add('visible');
@@ -497,16 +794,14 @@ function hideMeasurementLine() {
 }
 
 function updateMeasurementLine() {
-  if (!transformControl.object || !measurementLine.classList.contains('visible')) return;
+  if (!selectedObject || !measurementLine.classList.contains('visible')) return;
   
-  const objPos = transformControl.object.position;
+  const objPos = selectedObject.position;
   currentDistance = objPos.distanceTo(originPosition);
   
-  // Proyectar posiciones 3D a 2D
   const origin2D = toScreenPosition(originPosition);
   const current2D = toScreenPosition(objPos);
   
-  // Actualizar línea SVG
   const line = document.getElementById('measure-line');
   const originDot = document.getElementById('origin-dot');
   
@@ -518,10 +813,8 @@ function updateMeasurementLine() {
   originDot.setAttribute('cx', origin2D.x);
   originDot.setAttribute('cy', origin2D.y);
   
-  // Actualizar etiqueta de distancia
   distanceLabel.textContent = currentDistance.toFixed(2) + ' m';
   
-  // Posicionar etiqueta en el punto medio
   const midX = (origin2D.x + current2D.x) / 2;
   const midY = (origin2D.y + current2D.y) / 2;
   
@@ -539,15 +832,14 @@ function toScreenPosition(position) {
   };
 }
 
-// === INPUT DE DISTANCIA EXACTA ===
+// === INPUT DE DISTANCIA ===
 function setupDistanceInput() {
   distanceLabel.addEventListener('click', () => {
-    if (!transformControl.object) return;
+    if (!selectedObject) return;
     
     document.getElementById('distance-input').value = currentDistance.toFixed(2);
     distanceInputDialog.classList.add('visible');
     document.getElementById('distance-input').focus();
-    document.getElementById('distance-input').select();
   });
   
   document.getElementById('distance-input').addEventListener('keypress', (e) => {
@@ -559,17 +851,14 @@ function applyDistance() {
   const input = document.getElementById('distance-input');
   const newDistance = parseFloat(input.value);
   
-  if (!transformControl.object || isNaN(newDistance)) return;
+  if (!selectedObject || isNaN(newDistance)) return;
   
-  const direction = transformControl.object.position.clone()
-    .sub(originPosition)
-    .normalize();
-  
+  const direction = selectedObject.position.clone().sub(originPosition).normalize();
   const newPos = originPosition.clone().add(direction.multiplyScalar(newDistance));
-  transformControl.object.position.copy(newPos);
-  lastPosition.copy(newPos);
+  selectedObject.position.copy(newPos);
   
-  enforceLimits(transformControl.object);
+  enforceLimits(selectedObject);
+  updateArrowPosition();
   updateMeasurementLine();
   closeDistanceDialog();
 }
@@ -578,7 +867,7 @@ function closeDistanceDialog() {
   distanceInputDialog.classList.remove('visible');
 }
 
-// === JAULA DE SEGURIDAD ===
+// === LÍMITES ===
 function enforceLimits(obj) {
   if (!obj) return;
 
@@ -591,76 +880,6 @@ function enforceLimits(obj) {
   obj.scale.x = Math.max(obj.scale.x, CFG.minScale);
   obj.scale.y = Math.max(obj.scale.y, CFG.minScale);
   obj.scale.z = Math.max(obj.scale.z, CFG.minScale);
-  
-  lastPosition.copy(obj.position);
-}
-
-// === LÓGICA TÁCTIL ===
-function setupTouchEvents() {
-  const canvas = renderer.domElement;
-
-  canvas.addEventListener('pointerdown', (e) => {
-    touchStartX = e.clientX; 
-    touchStartY = e.clientY;
-  });
-
-  canvas.addEventListener('pointerup', (e) => {
-    if (isGizmoInteracting) return;
-    
-    const dist = Math.hypot(e.clientX - touchStartX, e.clientY - touchStartY);
-
-    if (dist < 15) {
-      const now = Date.now();
-      if (now - lastTapTime < 400) {
-        handleDoubleTap(e.clientX, e.clientY);
-        showTapEffect(e.clientX, e.clientY);
-        lastTapTime = 0;
-      } else {
-        lastTapTime = now;
-      }
-    }
-  });
-}
-
-function handleDoubleTap(x, y) {
-  const rect = renderer.domElement.getBoundingClientRect();
-  mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
-  mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
-
-  raycaster.setFromCamera(mouse, camera);
-  const intersects = raycaster.intersectObjects(objects, false);
-
-  if (intersects.length > 0) {
-    const hit = intersects[0].object;
-    if (transformControl.object === hit) {
-      detachGizmo();
-    } else {
-      attachGizmo(hit);
-    }
-  } else {
-    detachGizmo();
-  }
-}
-
-function attachGizmo(obj) {
-  transformControl.attach(obj);
-  lastPosition.copy(obj.position);
-  originPosition.copy(obj.position);
-  initialCameraDistance = camera.position.length();
-  maxDragDistance = 0;
-  
-  objects.forEach(o => { 
-    if(o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge); 
-  });
-  if(obj.userData.edges) obj.userData.edges.material.color.setHex(CFG.selColor);
-}
-
-function detachGizmo() {
-  transformControl.detach();
-  objects.forEach(o => { 
-    if(o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge); 
-  });
-  hideMeasurementLine();
 }
 
 // === CREACIÓN ===
@@ -684,25 +903,19 @@ function spawn(type) {
   );
   mesh.add(edges);
   mesh.userData.edges = edges;
+  mesh.userData.originalColor = CFG.objColor;
 
   scene.add(mesh);
   objects.push(mesh);
   applyRenderMode(mesh, currentRenderMode);
-  attachGizmo(mesh);
 }
 
 // === MODOS ===
 function setMode(mode) {
-  transformControl.setMode(mode);
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
   const map = {translate:'btn-move', rotate:'btn-rot', scale:'btn-scale'};
   const id = map[mode];
   if(id) document.getElementById(id).classList.add('active');
-  
-  if(transformControl.object) {
-    originPosition.copy(transformControl.object.position);
-    initialCameraDistance = camera.position.length();
-  }
 }
 
 function setRenderMode(mode, btn) {
@@ -716,19 +929,25 @@ function applyRenderMode(mesh, mode) {
   const m = mesh.material;
   const e = mesh.userData.edges;
   if (mode === 'flat') {
-    m.map = null; m.roughness = 0.4; m.color.setHex(CFG.objColor); if(e) e.visible = true;
+    m.map = null; m.roughness = 0.4; 
+    if(mesh !== selectedObject) m.color.setHex(CFG.objColor);
+    if(e) e.visible = true;
   } else if (mode === 'lightmap') {
-    m.map = null; m.roughness = 1; m.color.setHex(0xd0d0d5); if(e) e.visible = false;
+    m.map = null; m.roughness = 1; 
+    if(mesh !== selectedObject) m.color.setHex(0xd0d0d5);
+    if(e) e.visible = false;
   } else if (mode === 'workbench') {
-    m.map = gridTexture; m.roughness = 0.5; m.color.setHex(0xffffff); if(e) e.visible = true;
+    m.map = gridTexture; m.roughness = 0.5; 
+    if(mesh !== selectedObject) m.color.setHex(0xffffff);
+    if(e) e.visible = true;
   }
   m.needsUpdate = true;
 }
 
 function del() {
-  if(transformControl.object) {
-    const o = transformControl.object;
-    detachGizmo();
+  if(selectedObject) {
+    const o = selectedObject;
+    deselectObject();
     scene.remove(o);
     const idx = objects.indexOf(o);
     if(idx >= 0) objects.splice(idx, 1);
@@ -736,8 +955,10 @@ function del() {
 }
 
 function randomColor() {
-  if(transformControl.object) {
-    transformControl.object.material.color.setHex(Math.random()*0xffffff);
+  if(selectedObject) {
+    const newColor = Math.random()*0xffffff;
+    selectedObject.material.color.setHex(newColor);
+    selectedObject.userData.originalColor = newColor;
   }
 }
 
@@ -778,16 +999,9 @@ function onResize() {
 
 function animate() {
   requestAnimationFrame(animate);
-  orbit.update();
   
-  // Mantener gizmo visible
-  if (transformControl.visible) {
-    customizeArrowGizmo();
-  }
-  
-  // Actualizar medición si está activa
-  if (isDragging && measurementLine.classList.contains('visible')) {
-    updateMeasurementLine();
+  if (!isManipulating) {
+    orbit.update();
   }
   
   renderer.render(scene, camera);
