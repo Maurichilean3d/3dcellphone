@@ -6,11 +6,32 @@
   <title>MR Studio Complete</title>
   <style>
     /* === ESTILOS UI (APPLE STYLE) === */
+    :root {
+      --bg-primary: #f2f2f7;
+      --bg-secondary: #ffffff;
+      --text-primary: #1c1c1e;
+      --text-secondary: #8e8e93;
+      --border-color: rgba(255,255,255,0.4);
+      --shadow-color: rgba(0,0,0,0.15);
+    }
+    
+    body.dark-mode {
+      --bg-primary: #1c1c1e;
+      --bg-secondary: #2c2c2e;
+      --text-primary: #ffffff;
+      --text-secondary: #98989d;
+      --border-color: rgba(255,255,255,0.1);
+      --shadow-color: rgba(0,0,0,0.5);
+    }
+    
     body { 
-      margin: 0; background: #f2f2f7; overflow: hidden; 
+      margin: 0; 
+      background: var(--bg-primary); 
+      overflow: hidden; 
       font-family: -apple-system, "SF Pro Text", sans-serif;
       -webkit-user-select: none; user-select: none; touch-action: none; 
-      color: #1c1c1e;
+      color: var(--text-primary);
+      transition: background 0.3s ease;
     }
     
     #overlay {
@@ -19,8 +40,48 @@
       background: rgba(255,255,255,0.95); backdrop-filter: blur(25px);
       z-index: 999; transition: opacity 0.4s ease;
     }
+    
+    body.dark-mode #overlay {
+      background: rgba(28, 28, 30, 0.95);
+    }
+    
     h1 { font-weight: 800; font-size: 32px; margin: 0 0 10px 0; letter-spacing: -1px; }
-    p { color: #8e8e93; margin: 0 0 40px 0; font-weight: 500; text-align: center; max-width: 80%; }
+    p { color: var(--text-secondary); margin: 0 0 30px 0; font-weight: 500; text-align: center; max-width: 80%; }
+    
+    /* === SELECTOR DE TEMA === */
+    #theme-selector {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 40px;
+    }
+    
+    .theme-option {
+      padding: 12px 24px;
+      border: 2px solid #e5e5ea;
+      border-radius: 16px;
+      background: white;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: 0.2s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .theme-option.active {
+      border-color: #FF9500;
+      background: #FF9500;
+      color: white;
+    }
+    
+    .theme-option:active {
+      transform: scale(0.96);
+    }
+    
+    .theme-icon {
+      font-size: 18px;
+    }
     
     button.start-btn {
       padding: 16px 48px; font-size: 18px; 
@@ -79,18 +140,19 @@
     /* === BOTÓN GLOBAL/LOCAL === */
     #space-toggle {
       position: absolute;
-      top: 50px;
-      left: 20px;
-      padding: 12px 20px;
+      top: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      padding: 10px 18px;
       background: rgba(255, 255, 255, 0.95);
       border: 2px solid #FF9500;
-      border-radius: 22px;
+      border-radius: 20px;
       color: #1c1c1e;
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 700;
       display: none;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       box-shadow: 0 4px 15px rgba(255, 149, 0, 0.3);
       cursor: pointer;
       z-index: 150;
@@ -103,7 +165,7 @@
     }
     
     #space-toggle:active {
-      transform: scale(0.96);
+      transform: translateX(-50%) scale(0.96);
     }
     
     #space-toggle.local {
@@ -113,7 +175,7 @@
     }
     
     #space-icon {
-      font-size: 18px;
+      font-size: 16px;
     }
 
     #toolbar-container {
@@ -300,14 +362,15 @@
     
     .axis-input-field {
       flex: 1;
-      padding: 14px;
-      font-size: 18px;
+      padding: 16px;
+      font-size: 22px;
       font-weight: 700;
       text-align: center;
       border: 2px solid #e5e5ea;
       border-radius: 12px;
       font-family: 'SF Mono', 'Monaco', monospace;
       transition: 0.2s;
+      min-width: 120px;
     }
     
     .axis-input-field:focus {
@@ -359,6 +422,18 @@
 <div id="overlay">
   <h1>MR STUDIO COMPLETE</h1>
   <p>Sistema Completo: Mover • Rotar • Escalar</p>
+  
+  <div id="theme-selector">
+    <div class="theme-option active" onclick="setTheme('light')" id="theme-light">
+      <span class="theme-icon">☀️</span>
+      <span>Modo Claro</span>
+    </div>
+    <div class="theme-option" onclick="setTheme('dark')" id="theme-dark">
+      <span class="theme-icon">🌙</span>
+      <span>Modo Oscuro</span>
+    </div>
+  </div>
+  
   <button class="start-btn" id="btn-start">Comenzar</button>
 </div>
 
@@ -583,6 +658,28 @@ function init() {
   window.applyAxisValue = applyAxisValue;
   window.closeAxisDialog = closeAxisDialog;
   window.toggleSpace = toggleSpace;
+  window.setTheme = setTheme;
+}
+
+// === TEMA CLARO/OSCURO ===
+function setTheme(theme) {
+  const body = document.body;
+  const lightBtn = document.getElementById('theme-light');
+  const darkBtn = document.getElementById('theme-dark');
+  
+  if (theme === 'dark') {
+    body.classList.add('dark-mode');
+    scene.background = new THREE.Color(0x1c1c1e);
+    scene.fog = new THREE.Fog(0x1c1c1e, 30, 120);
+    lightBtn.classList.remove('active');
+    darkBtn.classList.add('active');
+  } else {
+    body.classList.remove('dark-mode');
+    scene.background = new THREE.Color(CFG.bg);
+    scene.fog = new THREE.Fog(CFG.bg, 30, 120);
+    lightBtn.classList.add('active');
+    darkBtn.classList.remove('active');
+  }
 }
 
 // === CREAR GIZMOS SEGÚN MODO ===
@@ -1402,3 +1499,4 @@ function animate() {
 </script>
 </body>
 </html>
+
