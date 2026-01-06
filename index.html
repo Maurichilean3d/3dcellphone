@@ -3,14 +3,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover" />
-  <title>MR Studio - Clear Gizmo</title>
+  <title>MR Studio - Smart Tap</title>
   <style>
+    /* === ESTILOS UI (APPLE STYLE) === */
     body { 
       margin: 0; background: #f2f2f7; overflow: hidden; 
       font-family: -apple-system, "SF Pro Text", sans-serif;
       -webkit-user-select: none; user-select: none; touch-action: none; 
       color: #1c1c1e;
     }
+    
+    /* Pantalla de inicio */
     #overlay {
       position: absolute; inset: 0; display: flex; flex-direction: column;
       justify-content: center; align-items: center; 
@@ -19,6 +22,7 @@
     }
     h1 { font-weight: 800; font-size: 32px; margin: 0 0 10px 0; letter-spacing: -1px; }
     p { color: #8e8e93; margin: 0 0 40px 0; font-weight: 500; }
+    
     button.start-btn {
       padding: 16px 48px; font-size: 18px; 
       background: #FF9500; border: none; border-radius: 40px; 
@@ -28,6 +32,7 @@
     }
     button.start-btn:active { transform: scale(0.96); }
 
+    /* Barra Superior de Render */
     #render-bar {
       position: absolute; top: 50px; left: 50%; transform: translateX(-50%);
       display: flex; background: rgba(255, 255, 255, 0.85);
@@ -43,6 +48,7 @@
     }
     .render-opt.active { background: #fff; color: #000; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
 
+    /* Barra Inferior (Toolbar) */
     #toolbar-container {
       position: absolute; bottom: 35px; left: 0; right: 0;
       display: flex; justify-content: center; pointer-events: none; z-index: 100;
@@ -67,27 +73,28 @@
     .label { font-size: 9px; margin-top: 3px; font-weight: 700; opacity: 0.7; }
     .divider { width: 1px; background: rgba(0,0,0,0.1); margin: 0 4px; flex-shrink: 0; }
 
-    #axis-legend {
-      position: absolute; bottom: 120px; left: 50%; transform: translateX(-50%);
-      display: flex; gap: 15px; font-size: 10px; font-weight: 700;
-      background: rgba(255,255,255,0.6); padding: 6px 12px; border-radius: 20px;
-      backdrop-filter: blur(10px); pointer-events: none; opacity: 0.6;
-    }
-    .axis-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 4px; }
-
+    /* Mensajes Flotantes */
     #toast {
       position: absolute; top: 120px; left: 50%; transform: translateX(-50%);
       background: rgba(255,255,255,0.95); padding: 10px 24px;
       border-radius: 30px; font-size: 13px; font-weight: 600;
       box-shadow: 0 5px 20px rgba(0,0,0,0.15); opacity: 0; transition: 0.3s; pointer-events: none;
     }
+    
+    /* Indicador Visual del Toque */
+    .tap-indicator {
+      position: absolute; width: 40px; height: 40px; border-radius: 50%;
+      background: rgba(255, 149, 0, 0.4); transform: translate(-50%, -50%);
+      pointer-events: none; animation: pop 0.4s ease-out forwards; z-index: 9999;
+    }
+    @keyframes pop { to { transform: translate(-50%, -50%) scale(1.5); opacity: 0; } }
   </style>
 </head>
 <body>
 
 <div id="overlay">
   <h1>MR STUDIO</h1>
-  <p>Gizmos ultra visibles</p>
+  <p>Edición por Doble Toque</p>
   <button class="start-btn" id="btn-start">Comenzar</button>
 </div>
 
@@ -95,12 +102,6 @@
   <button class="render-opt active" onclick="setRenderMode('flat', this)">Plano</button>
   <button class="render-opt" onclick="setRenderMode('lightmap', this)">Clay</button>
   <button class="render-opt" onclick="setRenderMode('workbench', this)">Tech</button>
-</div>
-
-<div id="axis-legend">
-  <span style="color:#ff3b30"><span class="axis-dot" style="background:#ff3b30"></span>X (Rojo)</span>
-  <span style="color:#34c759"><span class="axis-dot" style="background:#34c759"></span>Y (Verde)</span>
-  <span style="color:#007aff"><span class="axis-dot" style="background:#007aff"></span>Z (Azul)</span>
 </div>
 
 <div id="toast">Doble toque para seleccionar</div>
@@ -113,7 +114,6 @@
     <button class="tool-btn active" id="btn-move" onclick="setMode('translate')">↔️<span class="label">Mover</span></button>
     <button class="tool-btn" id="btn-rot" onclick="setMode('rotate')">🔄<span class="label">Rotar</span></button>
     <button class="tool-btn" id="btn-scale" onclick="setMode('scale')">🔍<span class="label">Escala</span></button>
-    <button class="tool-btn" id="btn-all" onclick="setMode('all')">✨<span class="label">Todo</span></button>
     <div class="divider"></div>
     <button class="tool-btn btn-delete" onclick="del()">🗑️<span class="label">Borrar</span></button>
     <button class="tool-btn" onclick="randomColor()">🎨<span class="label">Color</span></button>
@@ -134,15 +134,17 @@ import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { TransformControls } from 'three/addons/controls/TransformControls.js';
 
+// === CONFIGURACIÓN ===
 const CFG = {
   bg: 0xf2f2f7,
   objColor: 0xdbe4eb,
   objEdge: 0xffffff,
-  selColor: 0xFF9500
+  selColor: 0xFF9500 // Naranja Selección
 };
 
 let scene, camera, renderer, orbit;
-let controlT, controlR, controlS;
+// Usaremos un solo control activo a la vez para simplificar la lógica del touch
+let transformControl; 
 
 const objects = [];
 const raycaster = new THREE.Raycaster();
@@ -150,21 +152,25 @@ const mouse = new THREE.Vector2();
 let currentRenderMode = 'flat';
 let gridTexture = null;
 
+// Variables de Control Táctil
 let lastTapTime = 0;
 let touchStartX = 0, touchStartY = 0;
-let isGizmoInteracting = false;
+let isGizmoInteracting = false; // Bandera crítica
 
 init();
 animate();
 
 function init() {
+  // 1. ESCENA
   scene = new THREE.Scene();
   scene.background = new THREE.Color(CFG.bg);
-  scene.fog = new THREE.Fog(CFG.bg, 10, 40);
+  scene.fog = new THREE.Fog(CFG.bg, 10, 50);
 
+  // 2. CÁMARA
   camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 1000);
   camera.position.set(4, 4, 6);
 
+  // 3. RENDERER
   renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
   renderer.setSize(window.innerWidth, window.innerHeight);
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
@@ -172,6 +178,7 @@ function init() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   document.body.appendChild(renderer.domElement);
 
+  // 4. LUCES
   scene.add(new THREE.HemisphereLight(0xffffff, 0xffffff, 0.7));
   const dir = new THREE.DirectionalLight(0xffffff, 1.2);
   dir.position.set(5, 12, 8);
@@ -179,68 +186,52 @@ function init() {
   dir.shadow.mapSize.set(2048, 2048);
   scene.add(dir);
 
+  // 5. GRID Y EJES DE REFERENCIA
   const grid = new THREE.GridHelper(50, 50, 0xc7c7cc, 0xe5e5ea);
   scene.add(grid);
-
-  // Axes helper SAFE (sin reventar por material raro)
-  const globalAxes = new THREE.AxesHelper(2);
+  
+  // Ejes pequeños en el origen (0,0,0) solo como referencia
+  const globalAxes = new THREE.AxesHelper(1);
+  globalAxes.material.depthTest = false; 
   globalAxes.renderOrder = 1;
   scene.add(globalAxes);
 
   gridTexture = createTechTexture();
 
+  // 6. ORBIT CONTROLS (Navegación)
   orbit = new OrbitControls(camera, renderer.domElement);
   orbit.enableDamping = true;
   orbit.dampingFactor = 0.05;
   orbit.maxPolarAngle = Math.PI / 2 - 0.05;
 
-  // 3 gizmos (move/rotate/scale) + "all"
-  controlT = new TransformControls(camera, renderer.domElement);
-  controlR = new TransformControls(camera, renderer.domElement);
-  controlS = new TransformControls(camera, renderer.domElement);
+  // 7. TRANSFORM CONTROLS (GIZMO DE EDICIÓN)
+  transformControl = new TransformControls(camera, renderer.domElement);
+  transformControl.setSize(2.5); // Tamaño grande para dedos
+  transformControl.space = 'local'; // Ejes locales del objeto
+  
+  // Evento CRÍTICO: Cuando arrastras un eje, bloquea la cámara y marca interaction
+  transformControl.addEventListener('dragging-changed', (event) => {
+    orbit.enabled = !event.value;
+    isGizmoInteracting = event.value; 
+  });
 
-  controlT.setMode('translate');
-  controlR.setMode('rotate');
-  controlS.setMode('scale');
+  scene.add(transformControl);
 
-  controlT.setSize(3.0);
-  controlR.setSize(3.0);
-  controlS.setSize(3.0);
-
-  controlT.space = 'local';
-  controlR.space = 'local';
-  controlS.space = 'local';
-
-  const onDraggingChanged = (e) => {
-    orbit.enabled = !e.value;
-    isGizmoInteracting = e.value;
-  };
-
-  controlT.addEventListener('dragging-changed', onDraggingChanged);
-  controlR.addEventListener('dragging-changed', onDraggingChanged);
-  controlS.addEventListener('dragging-changed', onDraggingChanged);
-
-  controlT.visible = true;
-  controlR.visible = false;
-  controlS.visible = false;
-
-  scene.add(controlT);
-  scene.add(controlR);
-  scene.add(controlS);
-
+  // Eventos de Ventana y Touch
   window.addEventListener('resize', onResize);
   setupTouchEvents();
 
+  // Iniciar UI
   document.getElementById('btn-start').addEventListener('click', () => {
     document.getElementById('overlay').style.opacity = 0;
     setTimeout(() => {
       document.getElementById('overlay').style.display = 'none';
-      msg("Doble toque para seleccionar");
+      msg("Doble toque para editar");
     }, 500);
     spawn('box');
   });
 
-  // IMPORTANTÍSIMO: exponer funciones a los botones HTML
+  // Funciones globales para HTML
   window.spawn = spawn;
   window.setMode = setMode;
   window.del = del;
@@ -248,24 +239,107 @@ function init() {
   window.randomColor = randomColor;
 }
 
-function updateGizmoVisibility() {
-  const controls = [controlT, controlR, controlS];
-  controls.forEach((ctrl) => {
-    if (ctrl && ctrl.object && ctrl.visible) {
-      ctrl.traverse((child) => {
-        if ((child.isMesh || child.isLine) && child.material) {
-          child.material.depthTest = false;
-          child.material.depthWrite = false;
-          child.renderOrder = 999;
-        }
-      });
+// === LÓGICA DE DOBLE TOQUE INTELIGENTE ===
+function setupTouchEvents() {
+  const canvas = renderer.domElement;
+
+  canvas.addEventListener('pointerdown', (e) => {
+    touchStartX = e.clientX; 
+    touchStartY = e.clientY;
+  });
+
+  canvas.addEventListener('pointerup', (e) => {
+    // 1. Si estamos arrastrando el gizmo (moviendo el objeto), ignoramos el "tap"
+    if (isGizmoInteracting || transformControl.dragging) return;
+
+    // 2. Calculamos si el dedo se movió (diferencia entre click y arrastre)
+    const dist = Math.hypot(e.clientX - touchStartX, e.clientY - touchStartY);
+
+    // Si el movimiento es menor a 15px, se considera un "Tap"
+    if (dist < 15) {
+      const now = Date.now();
+      
+      // Si el tiempo entre taps es < 450ms, es DOBLE TAP
+      if (now - lastTapTime < 450) {
+        
+        // Ejecutar lógica de selección
+        handleDoubleTap(e.clientX, e.clientY);
+        
+        // Feedback visual (círculo naranja)
+        showTapEffect(e.clientX, e.clientY);
+        
+        lastTapTime = 0; // Resetear timer
+      } else {
+        lastTapTime = now;
+      }
     }
   });
 }
 
+function handleDoubleTap(x, y) {
+  // Raycast para ver qué tocamos
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
+
+  raycaster.setFromCamera(mouse, camera);
+  const intersects = raycaster.intersectObjects(objects, false);
+
+  if (intersects.length > 0) {
+    const hitObject = intersects[0].object;
+
+    // LÓGICA TOGGLE:
+    // Si tocamos el objeto que YA está seleccionado...
+    if (transformControl.object === hitObject) {
+      // ...lo deseleccionamos (Cerramos edición)
+      detachGizmo();
+      msg("Edición finalizada");
+    } else {
+      // ...si es otro, lo seleccionamos (Abrimos edición)
+      attachGizmo(hitObject);
+    }
+  } else {
+    // Si tocamos el vacío con doble tap, deseleccionar todo
+    detachGizmo();
+  }
+}
+
+function attachGizmo(obj) {
+  transformControl.attach(obj);
+  
+  // Resetear colores de todos
+  objects.forEach(o => { if(o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge); });
+  
+  // Marcar seleccionado en naranja
+  if(obj.userData.edges) obj.userData.edges.material.color.setHex(CFG.selColor);
+  
+  msg("Editando objeto");
+}
+
+function detachGizmo() {
+  transformControl.detach();
+  // Resetear colores
+  objects.forEach(o => { if(o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge); });
+}
+
+// === VISIBILIDAD DE GIZMOS (X-RAY) ===
+// Esta función fuerza que los gizmos se dibujen siempre encima
+function updateGizmoVisibility() {
+  if (transformControl && transformControl.object && transformControl.visible) {
+    transformControl.traverse((child) => {
+      if ((child.isMesh || child.isLine) && child.material) {
+        child.material.depthTest = false;
+        child.material.depthWrite = false;
+        child.renderOrder = 999;
+      }
+    });
+  }
+}
+
+// === CREACIÓN DE OBJETOS ===
 function spawn(type) {
   let geo;
-  if (type === 'box') geo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
+  if(type === 'box') geo = new THREE.BoxGeometry(1.5, 1.5, 1.5);
   else geo = new THREE.SphereGeometry(0.9, 48, 48);
 
   const mat = new THREE.MeshStandardMaterial({
@@ -273,8 +347,7 @@ function spawn(type) {
   });
 
   const mesh = new THREE.Mesh(geo, mat);
-  mesh.castShadow = true; 
-  mesh.receiveShadow = true;
+  mesh.castShadow = true; mesh.receiveShadow = true;
   mesh.position.set((Math.random()-0.5)*4, 0.75, (Math.random()-0.5)*4);
 
   const edges = new THREE.LineSegments(
@@ -287,75 +360,34 @@ function spawn(type) {
   scene.add(mesh);
   objects.push(mesh);
   applyRenderMode(mesh, currentRenderMode);
+  
+  // Al crear, seleccionamos inmediatamente
   attachGizmo(mesh);
 }
 
-function setupTouchEvents() {
-  const canvas = renderer.domElement;
-
-  canvas.addEventListener('pointerdown', (e) => {
-    touchStartX = e.clientX; 
-    touchStartY = e.clientY;
-  });
-
-  canvas.addEventListener('pointerup', (e) => {
-    if (isGizmoInteracting) return;
-    if (controlT.dragging || controlR.dragging || controlS.dragging) return;
-
-    const dist = Math.hypot(e.clientX - touchStartX, e.clientY - touchStartY);
-    if (dist < 20) {
-      const now = Date.now();
-      if (now - lastTapTime < 450) {
-        checkSelection(e.clientX, e.clientY);
-        lastTapTime = 0;
-      } else {
-        lastTapTime = now;
-      }
-    }
-  });
+// === MODOS Y HERRAMIENTAS ===
+function setMode(mode) {
+  transformControl.setMode(mode);
+  
+  // Actualizar botones UI
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+  const map = {translate:'btn-move', rotate:'btn-rot', scale:'btn-scale'};
+  const id = map[mode];
+  if(id) document.getElementById(id).classList.add('active');
+  
+  msg("Modo: " + (mode==='translate'?'Mover':mode==='rotate'?'Rotar':'Escalar'));
 }
 
-function checkSelection(x, y) {
-  const rect = renderer.domElement.getBoundingClientRect();
-  mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
-  mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
-
-  raycaster.setFromCamera(mouse, camera);
-  const intersects = raycaster.intersectObjects(objects, false);
-
-  if (intersects.length > 0) attachGizmo(intersects[0].object);
-  else detachGizmo();
-}
-
-function attachGizmo(obj) {
-  controlT.attach(obj);
-  controlR.attach(obj);
-  controlS.attach(obj);
-
-  objects.forEach(o => { if (o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge); });
-  if (obj.userData.edges) obj.userData.edges.material.color.setHex(CFG.selColor);
-
-  msg("Objeto seleccionado");
-}
-
-function detachGizmo() {
-  controlT.detach();
-  controlR.detach();
-  controlS.detach();
-  objects.forEach(o => { if (o.userData.edges) o.userData.edges.material.color.setHex(CFG.objEdge); });
-}
-
-function setRenderMode(mode, btnEl) {
+function setRenderMode(mode, btn) {
   currentRenderMode = mode;
   document.querySelectorAll('.render-opt').forEach(b => b.classList.remove('active'));
-  if (btnEl) btnEl.classList.add('active');
+  if(btn) btn.classList.add('active');
   objects.forEach(o => applyRenderMode(o, mode));
 }
 
 function applyRenderMode(mesh, mode) {
   const m = mesh.material;
   const e = mesh.userData.edges;
-
   if (mode === 'flat') {
     m.map = null; m.roughness = 0.4; m.color.setHex(CFG.objColor); if(e) e.visible = true;
   } else if (mode === 'lightmap') {
@@ -366,49 +398,35 @@ function applyRenderMode(mesh, mode) {
   m.needsUpdate = true;
 }
 
-function setMode(mode) {
-  if (mode === 'translate') {
-    controlT.visible = true;  controlR.visible = false; controlS.visible = false;
-  } else if (mode === 'rotate') {
-    controlT.visible = false; controlR.visible = true;  controlS.visible = false;
-  } else if (mode === 'scale') {
-    controlT.visible = false; controlR.visible = false; controlS.visible = true;
-  } else if (mode === 'all') {
-    controlT.visible = true;  controlR.visible = true;  controlS.visible = true;
-  }
-
-  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-  const map = {translate:'btn-move', rotate:'btn-rot', scale:'btn-scale', all:'btn-all'};
-  const id = map[mode];
-  const btn = document.getElementById(id);
-  if (btn) btn.classList.add('active');
-
-  const label = (mode === 'all') ? 'Mover + Rotar + Escalar' :
-                (mode === 'translate') ? 'Mover' :
-                (mode === 'rotate') ? 'Rotar' : 'Escalar';
-  msg(label);
-}
-
 function del() {
-  if (controlT.object) {
-    const o = controlT.object;
+  if(transformControl.object) {
+    const o = transformControl.object;
     detachGizmo();
     scene.remove(o);
     const idx = objects.indexOf(o);
-    if (idx >= 0) objects.splice(idx, 1);
-    msg("Eliminado");
+    if(idx >= 0) objects.splice(idx, 1);
+    msg("Objeto eliminado");
   }
 }
 
 function randomColor() {
-  if (controlT.object) controlT.object.material.color.setHex(Math.random() * 0xffffff);
+  if(transformControl.object) transformControl.object.material.color.setHex(Math.random()*0xffffff);
 }
 
+// === UTILS ===
 function msg(text) {
   const t = document.getElementById('toast');
   t.textContent = text;
   t.style.opacity = 1;
   setTimeout(() => t.style.opacity = 0, 2000);
+}
+
+function showTapEffect(x, y) {
+  const el = document.createElement('div');
+  el.className = 'tap-indicator';
+  el.style.left = x + 'px'; el.style.top = y + 'px';
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 500);
 }
 
 function createTechTexture() {
