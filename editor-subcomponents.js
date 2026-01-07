@@ -1,4 +1,13 @@
-/* editor-subcomponents.js */
+/* ============================================================
+   Subcomponents module: vertices / edges / faces selection + edit
+   - Works with core by receiving an API object (setupSubcomponents)
+   - Implements:
+     - toggles: verts/edges/faces
+     - picking (double tap)
+     - moving subcomponents using world delta from core plane drag
+     - commit action for undo/redo
+============================================================ */
+
 export function setupSubcomponents(api) {
   const {
     THREE, CFG, scene, camera, renderer,
@@ -20,9 +29,9 @@ export function setupSubcomponents(api) {
   // { type:'vertex'|'edge'|'face', indices:[...], worldPos:Vector3, accLocal?:Vector3 }
 
   function setSubFlagsFromUI() {
-    subModeVerts = btnV && btnV.classList.contains('active');
-    subModeEdges = btnE && btnE.classList.contains('active');
-    subModeFaces = btnF && btnF.classList.contains('active');
+    subModeVerts = btnV.classList.contains('active');
+    subModeEdges = btnE.classList.contains('active');
+    subModeFaces = btnF.classList.contains('active');
 
     const obj = getSelectedObject();
     if (obj) applySubVisibility(obj);
@@ -123,9 +132,9 @@ export function setupSubcomponents(api) {
     ensureSubHelpers(obj);
     const show = (getSelectedObject() === obj);
 
-    if(obj.userData.sub.vertexPoints) obj.userData.sub.vertexPoints.visible = show && subModeVerts;
-    if(obj.userData.sub.edgeLines) obj.userData.sub.edgeLines.visible = show && subModeEdges;
-    if(obj.userData.sub.faceWire) obj.userData.sub.faceWire.visible = show && subModeFaces;
+    obj.userData.sub.vertexPoints.visible = show && subModeVerts;
+    obj.userData.sub.edgeLines.visible = show && subModeEdges;
+    obj.userData.sub.faceWire.visible = show && subModeFaces;
   }
 
   function clearActiveSub() {
@@ -139,6 +148,7 @@ export function setupSubcomponents(api) {
     activeSub = sub;
     if (!activeSub) return;
     activeSub.accLocal = new THREE.Vector3();
+    // En subcomponent selection: conviene “focus” a objeto completo (core ya tiene focus button)
   }
 
   // Highlight helpers
@@ -221,6 +231,9 @@ export function setupSubcomponents(api) {
 
   // Used by undo/redo actions
   function applyVertexEditForward(action) {
+    const obj = api.getSelectedObject ? api.getSelectedObject() : null;
+    // safer: find by id using core method if exposed? not available here
+    // We'll locate through scene traversal:
     const mesh = findObjectById(action.id);
     if (!mesh) return;
 
@@ -286,7 +299,7 @@ export function setupSubcomponents(api) {
     return null;
   }
 
-  // Called by core during plane drag
+  // Called by core during plane drag: world delta -> local delta, apply, update activeSub world pos
   function applySubTranslateWorldDelta(obj, worldDelta) {
     if (!activeSub) return 0;
 
@@ -309,7 +322,7 @@ export function setupSubcomponents(api) {
     return movedDistance;
   }
 
-  // Commit as an undoable action
+  // Commit as an undoable action (called by core when OK pressed)
   function commitSubEditIfAny(pushActionFn) {
     if (!activeSub || !activeSub.accLocal) return;
 
@@ -343,6 +356,8 @@ export function setupSubcomponents(api) {
     getActiveSubWorldPos,
     applySubTranslateWorldDelta,
     commitSubEditIfAny,
+
+    // undo/redo hooks
     applyVertexEditForward,
     applyVertexEditInverse
   };
