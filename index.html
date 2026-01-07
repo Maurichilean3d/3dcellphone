@@ -22,7 +22,6 @@
       color:var(--text-primary); transition:background .3s ease;
     }
 
-    /* Overlay */
     #overlay{
       position:absolute; inset:0; display:flex; flex-direction:column;
       justify-content:center; align-items:center;
@@ -33,7 +32,6 @@
     h1{ font-weight:900; font-size:32px; margin:0 0 10px 0; letter-spacing:-1px; }
     p{ color:var(--text-secondary); margin:0 0 30px 0; font-weight:600; text-align:center; max-width:80%; }
 
-    /* Theme selector */
     #theme-selector{ display:flex; gap:12px; margin-bottom:40px; }
     .theme-option{
       padding:12px 24px; border:2px solid #e5e5ea; border-radius:16px;
@@ -52,7 +50,6 @@
     }
     button.start-btn:active{ transform:scale(.96); }
 
-    /* Bars (safe area iPhone) */
     #render-bar, #camera-bar{
       position:absolute; left:50%; transform:translateX(-50%);
       display:flex; background:rgba(255,255,255,.9);
@@ -75,7 +72,6 @@
       background:#fff; color:#000; box-shadow:0 2px 8px rgba(0,0,0,.15);
     }
 
-    /* Undo/Redo icon buttons */
     .cam-icon{
       width:44px; height:36px; border-radius:10px; border:none;
       background:rgba(235,235,240,.6);
@@ -88,7 +84,6 @@
     .cam-icon:active{ transform:scale(.96); }
     .cam-icon[disabled]{ opacity:.35; cursor:default; transform:none; }
 
-    /* Exit */
     #exit-manipulation{
       position:absolute; top:calc(50px + env(safe-area-inset-top)); right:calc(20px + env(safe-area-inset-right));
       width:44px; height:44px;
@@ -102,7 +97,6 @@
     #exit-manipulation.visible{ display:flex; }
     #exit-manipulation:active{ transform:scale(.9); }
 
-    /* Global/Local */
     #space-toggle{
       position:absolute; top:calc(170px + env(safe-area-inset-top)); left:50%; transform:translateX(-50%);
       padding:10px 18px; background:rgba(255,255,255,.95);
@@ -117,7 +111,6 @@
     #space-toggle.local{ background:rgba(52,199,89,.95); border-color:#34C759; color:#fff; }
     #space-icon{ font-size:16px; }
 
-    /* Edit values */
     #edit-values-btn{
       position:absolute; width:56px; height:56px; background:rgba(255,149,0,.95);
       border:3px solid #fff; border-radius:28px; color:#fff; font-size:26px;
@@ -129,7 +122,6 @@
     #edit-values-btn:active{ transform:scale(.9); }
     body.dark-mode #edit-values-btn{ border-color:rgba(255,255,255,.3); }
 
-    /* Toolbar (safe bottom) */
     #toolbar-container{
       position:absolute;
       bottom:calc(35px + env(safe-area-inset-bottom));
@@ -158,7 +150,6 @@
     .label{ font-size:9px; margin-top:3px; font-weight:900; opacity:.7; }
     .divider{ width:1px; background:rgba(0,0,0,.1); margin:0 4px; flex-shrink:0; }
 
-    /* Sub-toolbar (thin) */
     #subtoolbar-container{
       position:absolute;
       bottom:calc(112px + env(safe-area-inset-bottom));
@@ -186,7 +177,7 @@
     }
     body.dark-mode .sub-btn{ color:#fff; background:rgba(255,255,255,.12); }
     .sub-btn.active{
-      background:rgba(52,199,89,.95); /* ✅ color distintivo subcomponentes */
+      background:rgba(52,199,89,.95);
       color:#fff;
       box-shadow:0 10px 22px rgba(52,199,89,.28);
     }
@@ -196,7 +187,6 @@
       font-size:12px; font-weight:900;
     }
 
-    /* Measurement */
     #measurement-line{ position:absolute; pointer-events:none; opacity:0; transition:opacity .2s; z-index:150; }
     #measurement-line.visible{ opacity:1; }
     #distance-label{
@@ -209,7 +199,6 @@
     }
     #distance-label.visible{ opacity:1; }
 
-    /* Confirm mini */
     #confirm-dialog{
       position:absolute;
       bottom:calc(150px + env(safe-area-inset-bottom));
@@ -228,7 +217,6 @@
     .mini-btn.cancel{ background:rgba(255,59,48,.95); }
     .mini-btn.ok{ background:rgba(52,199,89,.95); }
 
-    /* Axis input dialog */
     #axis-input-dialog{
       position:absolute; top:50%; left:50%; transform:translate(-50%,-50%);
       background:rgba(255,255,255,.98); backdrop-filter:blur(20px);
@@ -259,7 +247,6 @@
     #axis-input-dialog .btn-apply{ background:#34C759; } #axis-input-dialog .btn-cancel{ background:#FF3B30; }
     #axis-input-dialog button:active{ transform:scale(.96); }
 
-    /* Tap indicator */
     .tap-indicator{
       position:absolute; width:40px; height:40px; border-radius:50%;
       background:rgba(255,149,0,.4); transform:translate(-50%,-50%);
@@ -297,7 +284,7 @@
     }
     .camlock-btn:active{ transform:scale(0.94); }
     .camlock-btn.active{
-      background:rgba(0,122,255,0.92); /* azul cámara */
+      background:rgba(0,122,255,0.92);
       color:white;
       border-color:rgba(0,122,255,0.35);
       box-shadow:0 10px 26px rgba(0,122,255,0.28);
@@ -308,7 +295,7 @@
 
 <div id="overlay">
   <h1>MR STUDIO COMPLETE</h1>
-  <p>Sistema Completo: Objetos + Subcomponentes (V/E/F)</p>
+  <p>Objetos + Subcomponentes (V/E/F) con cámara “lock” en edición</p>
 
   <div id="theme-selector">
     <div class="theme-option active" onclick="setTheme('light')" id="theme-light">
@@ -349,7 +336,6 @@
 
 <button id="edit-values-btn">✏️</button>
 
-<!-- Panel lateral cámara (solo durante edición) -->
 <div id="edit-cam-panel">
   <button class="camlock-btn" id="btn-cam-zoom" title="Zoom">🔍</button>
   <button class="camlock-btn" id="btn-cam-orbit" title="Órbita">🌀</button>
@@ -419,7 +405,6 @@
 
 <div id="toolbar-container">
   <div id="toolbar">
-    <!-- Primitivas -->
     <button class="tool-btn" onclick="spawn('box')">📦<span class="label">Cubo</span></button>
     <button class="tool-btn" onclick="spawn('sphere')">⚪<span class="label">Esfera</span></button>
     <button class="tool-btn" onclick="spawn('cylinder')">🥫<span class="label">Cil</span></button>
@@ -430,12 +415,9 @@
 
     <div class="divider"></div>
 
-    <!-- Modos -->
     <button class="tool-btn active" id="btn-move" onclick="setMode('translate')">↔️<span class="label">Mover</span></button>
     <button class="tool-btn" id="btn-rot" onclick="setMode('rotate')">🔄<span class="label">Rotar</span></button>
     <button class="tool-btn" id="btn-scale" onclick="setMode('scale')">🔍<span class="label">Escala</span></button>
-
-    <!-- ✅ Nuevo: Selección de subcomponentes -->
     <button class="tool-btn" id="btn-select" onclick="setMode('select')">✅<span class="label">Selec</span></button>
 
     <div class="divider"></div>
@@ -464,9 +446,9 @@ const CFG = {
   objEdge: 0xffffff,
   selColor: 0xFF9500,
   selColorLight: 0xFFB84D,
-  subSelColor: 0x34C759,          // ✅ verde subcomponente
-  subSelColor2: 0x00BFFF,         // ✅ celeste (para bordes/caras)
-  vertexVisible: 0xFFFFFF,        // ✅ vértices visibles
+  subSelColor: 0x34C759,
+  subSelColor2: 0x00BFFF,
+  vertexVisible: 0xFFFFFF,
   maxDistance: 20.0,
   minScale: 0.05,
   maxScale: 10.0,
@@ -476,7 +458,6 @@ const CFG = {
 };
 
 let scene, camera, renderer, orbit;
-
 const objects = [];
 const raycaster = new THREE.Raycaster();
 const mouse = new THREE.Vector2();
@@ -484,26 +465,22 @@ const mouse = new THREE.Vector2();
 let currentRenderMode = 'flat';
 let gridTexture = null;
 
-// Selection (objetos)
 let selectedObject = null;
 let selectedObjects = [];
 let multiSelectEnabled = false;
 
-// Modo actual
 let currentMode = 'translate';  // translate, rotate, scale, select
 let currentSpace = 'world';
 
-// Gizmo
 let currentGizmo = null;
 let activeHandle = null;
 
-// Touch
 let lastTapTime = 0;
 let touchStartX = 0, touchStartY = 0;
 let isDragging = false;
 let dragStartPos = new THREE.Vector2();
 
-// Medición
+// measurement origin + transform origin
 let originPosition = new THREE.Vector3();
 let originQuaternion = new THREE.Quaternion();
 let originScale = new THREE.Vector3();
@@ -518,7 +495,7 @@ const spaceToggle = document.getElementById('space-toggle');
 const editValuesBtn = document.getElementById('edit-values-btn');
 const subtoolbar = document.getElementById('subtoolbar');
 
-// ====== Modo edición cámara (panel derecho) ======
+// ====== Edit camera locks ======
 let isEditMode = false;
 let editZoomEnabled = false;
 let editOrbitEnabled = false;
@@ -543,7 +520,6 @@ function setEditMode(on){
     orbit.enablePan = true;
   }
 }
-
 function applyCameraLocks(){
   if (!isEditMode) return;
   orbit.enableZoom = !!editZoomEnabled;
@@ -563,7 +539,7 @@ btnCamOrbit.addEventListener('click', () => {
   applyCameraLocks();
 });
 
-// ======= UNDO/REDO =======
+// ====== Undo/Redo ======
 const undoStack = [];
 const redoStack = [];
 let nextObjectId = 1;
@@ -593,13 +569,8 @@ function redo(){
   performActionForward(a);
   updateUndoRedoUI();
 }
-
 function snapshotTransform(obj){
-  return {
-    pos: obj.position.toArray(),
-    quat: obj.quaternion.toArray(),
-    scl: obj.scale.toArray()
-  };
+  return { pos: obj.position.toArray(), quat: obj.quaternion.toArray(), scl: obj.scale.toArray() };
 }
 function applyTransformSnapshot(obj, snap){
   obj.position.fromArray(snap.pos);
@@ -629,7 +600,6 @@ function performActionForward(a){
     const obj = findById(a.id);
     if (obj) applyTransformSnapshot(obj, a.after);
   } else if (a.type === 'vertexEdit'){
-    // replay vertex delta
     const obj = findById(a.id);
     if (obj) {
       applyVertexDelta(obj, a.indices, a.delta);
@@ -655,7 +625,6 @@ function performActionInverse(a){
   } else if (a.type === 'vertexEdit'){
     const obj = findById(a.id);
     if (obj) {
-      // inverse delta
       const inv = { x: -a.delta.x, y: -a.delta.y, z: -a.delta.z };
       applyVertexDelta(obj, a.indices, inv);
       refreshSubMeshes(obj);
@@ -663,141 +632,18 @@ function performActionInverse(a){
   }
 }
 
-// ======= Subcomponent Edit State =======
+// ======= Subcomponent state =======
 let subModeVerts = false;
 let subModeEdges = false;
 let subModeFaces = false;
 let allSelectEnabled = false;
 
-// Active sub selection
-let activeSub = null; // { type:'vertex'|'edge'|'face', indices:[...], worldPos:Vector3 }
+let activeSub = null; // { type:'vertex'|'edge'|'face', indices:[...], worldPos:Vector3, acc?:Vector3 }
 
-// Helpers for sub visuals
-function ensureSubHelpers(obj){
-  if (!obj || !obj.geometry) return;
+// ===== Drag state (plane-based) =====
+let dragState = null;
+// { mode:'translate', axis:'x'|'y'|'z'|'free', plane:THREE.Plane, startHit:Vector3, axisDirW:Vector3|null, objCenterW:Vector3, baseCamDist:number, movedMax:number, objRadius:number }
 
-  if (!obj.userData.sub) obj.userData.sub = {};
-
-  // Vertex points
-  if (!obj.userData.sub.vertexPoints){
-    const geom = obj.geometry;
-    const posAttr = geom.attributes.position;
-
-    // Create a copy for points (same positions)
-    const ptsGeo = new THREE.BufferGeometry();
-    ptsGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(posAttr.array), 3));
-
-    // Per-vertex color (all white visible)
-    const col = new Float32Array(posAttr.count * 3);
-    for (let i=0;i<posAttr.count;i++){
-      col[i*3+0] = 1; col[i*3+1] = 1; col[i*3+2] = 1;
-    }
-    ptsGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
-
-    const ptsMat = new THREE.PointsMaterial({
-      size: 0.08,
-      vertexColors: true,
-      depthTest: false,
-      transparent: true,
-      opacity: 0.95
-    });
-    const pts = new THREE.Points(ptsGeo, ptsMat);
-    pts.renderOrder = 998;
-    pts.visible = false;
-    pts.name = 'VertexPoints';
-    obj.add(pts);
-    obj.userData.sub.vertexPoints = pts;
-  }
-
-  // Edge lines (for selection highlight)
-  if (!obj.userData.sub.edgeLines){
-    const edges = new THREE.LineSegments(
-      new THREE.EdgesGeometry(obj.geometry),
-      new THREE.LineBasicMaterial({ color: CFG.subSelColor2, transparent:true, opacity: 0.55, depthTest:false })
-    );
-    edges.visible = false;
-    edges.renderOrder = 997;
-    edges.name = 'EdgeLines';
-    obj.add(edges);
-    obj.userData.sub.edgeLines = edges;
-  }
-
-  // Face helper (wireframe overlay)
-  if (!obj.userData.sub.faceWire){
-    const wire = new THREE.LineSegments(
-      new THREE.WireframeGeometry(obj.geometry),
-      new THREE.LineBasicMaterial({ color: CFG.subSelColor2, transparent:true, opacity:0.35, depthTest:false })
-    );
-    wire.visible = false;
-    wire.renderOrder = 996;
-    wire.name = 'FaceWire';
-    obj.add(wire);
-    obj.userData.sub.faceWire = wire;
-  }
-}
-
-function refreshSubMeshes(obj){
-  if (!obj?.userData?.sub) return;
-
-  // Update points positions if exist
-  const pts = obj.userData.sub.vertexPoints;
-  if (pts){
-    const src = obj.geometry.attributes.position.array;
-    const dstAttr = pts.geometry.attributes.position;
-    // copy
-    dstAttr.array.set(src);
-    dstAttr.needsUpdate = true;
-  }
-
-  // Rebuild edges/wire (geometry changed)
-  const edges = obj.userData.sub.edgeLines;
-  if (edges){
-    obj.remove(edges);
-    edges.geometry.dispose();
-    edges.material.dispose();
-    obj.userData.sub.edgeLines = null;
-  }
-  const wire = obj.userData.sub.faceWire;
-  if (wire){
-    obj.remove(wire);
-    wire.geometry.dispose();
-    wire.material.dispose();
-    obj.userData.sub.faceWire = null;
-  }
-  // Recreate
-  ensureSubHelpers(obj);
-  applySubVisibility(obj);
-}
-
-function applySubVisibility(obj){
-  ensureSubHelpers(obj);
-  const sub = obj.userData.sub;
-
-  // Only show helpers if we're in Select mode and object selected
-  const show = (currentMode === 'select' && selectedObject === obj);
-  sub.vertexPoints.visible = show && subModeVerts;
-  sub.edgeLines.visible = show && subModeEdges;
-  sub.faceWire.visible = show && subModeFaces;
-
-  // make points bigger when enabled
-  if (sub.vertexPoints) sub.vertexPoints.material.size = subModeVerts ? 0.10 : 0.08;
-}
-
-function clearActiveSub(){
-  activeSub = null;
-  removeGizmo();
-}
-
-function setActiveSub(sub){
-  activeSub = sub;
-  if (!selectedObject) return;
-
-  // Create gizmo at subcomponent world position
-  createGizmo('translate', sub.worldPos); // subcomponents: translate gizmo always
-  showConfirmDialog();
-}
-
-// ======= Init/Scene =======
 init();
 animate();
 
@@ -901,15 +747,6 @@ function setTheme(theme){
 }
 
 // ======= Camera helpers =======
-function focusOnTarget(target, distance=null){
-  const t = target.clone();
-  orbit.target.copy(t);
-  const d = distance ?? camera.position.distanceTo(orbit.target);
-  const dir = camera.position.clone().sub(orbit.target).normalize();
-  camera.position.copy(orbit.target.clone().add(dir.multiplyScalar(d)));
-  camera.lookAt(orbit.target);
-  orbit.update();
-}
 function fitAllObjects(){
   if (!objects.length) return;
   const box = new THREE.Box3();
@@ -928,12 +765,15 @@ function fitAllObjects(){
   camera.lookAt(center);
   orbit.update();
 }
+
+// Full focus (button / subcomponent select)
 function focusSelected(){
   if (!selectedObject) return;
   const box = new THREE.Box3().setFromObject(selectedObject);
   const center = box.getCenter(new THREE.Vector3());
   const size = box.getSize(new THREE.Vector3());
   const maxSize = Math.max(size.x,size.y,size.z);
+
   const fov = THREE.MathUtils.degToRad(camera.fov);
   const fitDist = (maxSize*0.5)/Math.tan(fov*0.5);
   const dist = THREE.MathUtils.clamp(fitDist*2.2, CFG.minZoom, CFG.maxZoom);
@@ -944,6 +784,34 @@ function focusSelected(){
   camera.lookAt(center);
   orbit.update();
 }
+
+// ✅ Soft focus for object selection (NO zoom-in agresivo)
+function focusSelectedSoft(){
+  if (!selectedObject) return;
+
+  const box = new THREE.Box3().setFromObject(selectedObject);
+  const center = box.getCenter(new THREE.Vector3());
+  const size = box.getSize(new THREE.Vector3());
+  const maxSize = Math.max(size.x, size.y, size.z);
+
+  // keep distance, only adjust target and gently clamp if extremely far/close
+  const currentDist = camera.position.distanceTo(orbit.target);
+  const desiredMin = Math.max(CFG.minZoom, maxSize * 1.2);
+  const desiredMax = Math.min(CFG.maxZoom, maxSize * 12.0);
+
+  const clampedDist = THREE.MathUtils.clamp(currentDist, desiredMin, desiredMax);
+
+  // smooth target shift
+  orbit.target.lerp(center, 0.18);
+
+  // move camera slightly to maintain same direction but clamped distance
+  const dir = camera.position.clone().sub(orbit.target).normalize();
+  camera.position.copy(orbit.target.clone().add(dir.multiplyScalar(clampedDist)));
+
+  camera.lookAt(orbit.target);
+  orbit.update();
+}
+
 function snapView(name){
   const t = selectedObject ? new THREE.Box3().setFromObject(selectedObject).getCenter(new THREE.Vector3()) : orbit.target.clone();
   orbit.target.copy(t);
@@ -984,25 +852,20 @@ function applyRenderMode(mesh, mode){
   m.needsUpdate = true;
 }
 
-// ======= Mode toggle (incl Select) =======
+// ======= Mode toggle =======
 function setMode(mode){
   currentMode = mode;
-
-  // UI active buttons
   document.querySelectorAll('#toolbar .tool-btn').forEach(b => b.classList.remove('active'));
   const map = { translate:'btn-move', rotate:'btn-rot', scale:'btn-scale', select:'btn-select' };
   const id = map[mode];
   if (id) document.getElementById(id).classList.add('active');
 
-  // In Select mode: show subtoolbar if selected
   if (selectedObject && currentMode === 'select'){
     subtoolbar.classList.add('visible');
     applySubVisibility(selectedObject);
     clearActiveSub();
-    // Select mode still allows gizmo on subcomponents only (created when tapping V/E/F)
     removeGizmo();
   } else {
-    // hide subtoolbar when leaving select
     subtoolbar.classList.remove('visible');
     clearActiveSub();
     if (selectedObject) createGizmo(mode, selectedObject.position.clone(), selectedObject);
@@ -1051,7 +914,6 @@ function toggleAllSelection(){
     }
   }
 }
-
 function toggleSubMode(which){
   if (which === 'verts') subModeVerts = !subModeVerts;
   if (which === 'edges') subModeEdges = !subModeEdges;
@@ -1062,6 +924,119 @@ function toggleSubMode(which){
   document.getElementById('sub-faces').classList.toggle('active', subModeFaces);
 
   if (selectedObject) applySubVisibility(selectedObject);
+}
+
+// ======= Sub helpers =======
+function ensureSubHelpers(obj){
+  if (!obj || !obj.geometry) return;
+  if (!obj.userData.sub) obj.userData.sub = {};
+
+  if (!obj.userData.sub.vertexPoints){
+    const geom = obj.geometry;
+    const posAttr = geom.attributes.position;
+
+    const ptsGeo = new THREE.BufferGeometry();
+    ptsGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(posAttr.array), 3));
+
+    const col = new Float32Array(posAttr.count * 3);
+    for (let i=0;i<posAttr.count;i++){
+      col[i*3+0] = 1; col[i*3+1] = 1; col[i*3+2] = 1;
+    }
+    ptsGeo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+
+    const ptsMat = new THREE.PointsMaterial({
+      size: 0.08,
+      vertexColors: true,
+      depthTest: false,
+      transparent: true,
+      opacity: 0.95
+    });
+    const pts = new THREE.Points(ptsGeo, ptsMat);
+    pts.renderOrder = 998;
+    pts.visible = false;
+    pts.name = 'VertexPoints';
+    obj.add(pts);
+    obj.userData.sub.vertexPoints = pts;
+  }
+
+  if (!obj.userData.sub.edgeLines){
+    const edges = new THREE.LineSegments(
+      new THREE.EdgesGeometry(obj.geometry),
+      new THREE.LineBasicMaterial({ color: CFG.subSelColor2, transparent:true, opacity: 0.55, depthTest:false })
+    );
+    edges.visible = false;
+    edges.renderOrder = 997;
+    edges.name = 'EdgeLines';
+    obj.add(edges);
+    obj.userData.sub.edgeLines = edges;
+  }
+
+  if (!obj.userData.sub.faceWire){
+    const wire = new THREE.LineSegments(
+      new THREE.WireframeGeometry(obj.geometry),
+      new THREE.LineBasicMaterial({ color: CFG.subSelColor2, transparent:true, opacity:0.35, depthTest:false })
+    );
+    wire.visible = false;
+    wire.renderOrder = 996;
+    wire.name = 'FaceWire';
+    obj.add(wire);
+    obj.userData.sub.faceWire = wire;
+  }
+}
+
+function refreshSubMeshes(obj){
+  if (!obj?.userData?.sub) return;
+
+  const pts = obj.userData.sub.vertexPoints;
+  if (pts){
+    const src = obj.geometry.attributes.position.array;
+    const dstAttr = pts.geometry.attributes.position;
+    dstAttr.array.set(src);
+    dstAttr.needsUpdate = true;
+  }
+
+  const edges = obj.userData.sub.edgeLines;
+  if (edges){
+    obj.remove(edges);
+    edges.geometry.dispose();
+    edges.material.dispose();
+    obj.userData.sub.edgeLines = null;
+  }
+  const wire = obj.userData.sub.faceWire;
+  if (wire){
+    obj.remove(wire);
+    wire.geometry.dispose();
+    wire.material.dispose();
+    obj.userData.sub.faceWire = null;
+  }
+  ensureSubHelpers(obj);
+  applySubVisibility(obj);
+}
+
+function applySubVisibility(obj){
+  ensureSubHelpers(obj);
+  const sub = obj.userData.sub;
+  const show = (currentMode === 'select' && selectedObject === obj);
+  sub.vertexPoints.visible = show && subModeVerts;
+  sub.edgeLines.visible = show && subModeEdges;
+  sub.faceWire.visible = show && subModeFaces;
+  if (sub.vertexPoints) sub.vertexPoints.material.size = subModeVerts ? 0.10 : 0.08;
+}
+
+function clearActiveSub(){
+  activeSub = null;
+  removeGizmo();
+}
+
+function setActiveSub(sub){
+  activeSub = sub;
+  if (!selectedObject) return;
+
+  // ✅ En subcomponentes: sí hacemos focus completo (como pediste)
+  focusSelected();
+
+  createGizmo('translate', sub.worldPos, selectedObject);
+  showConfirmDialog();
 }
 
 // ======= Gizmos =======
@@ -1075,7 +1050,6 @@ function createGizmo(mode, position, targetObject=null){
 
   currentGizmo.position.copy(position);
 
-  // orientation
   if (targetObject && currentSpace === 'local'){
     currentGizmo.quaternion.copy(targetObject.quaternion);
   } else {
@@ -1224,16 +1198,10 @@ function updateGizmoPositionForObject(){
   else currentGizmo.quaternion.identity();
 }
 
-// ======= Edit button (XYZ dialog) =======
+// ======= Edit XYZ dialog =======
 function setupEditButton(){
-  editValuesBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    openAxisDialog();
-  });
-  editValuesBtn.addEventListener('touchend', (e) => {
-    e.preventDefault(); e.stopPropagation();
-    openAxisDialog();
-  });
+  editValuesBtn.addEventListener('click', (e) => { e.stopPropagation(); openAxisDialog(); });
+  editValuesBtn.addEventListener('touchend', (e) => { e.preventDefault(); e.stopPropagation(); openAxisDialog(); });
 }
 
 function openAxisDialog(){
@@ -1242,7 +1210,7 @@ function openAxisDialog(){
     translate: { title:'Posición Exacta', subtitle:'Ingresa X, Y, Z' },
     rotate: { title:'Rotación Exacta', subtitle:'Grados (°)' },
     scale: { title:'Escala Exacta', subtitle:'Factores X, Y, Z' },
-    select: { title:'Edición', subtitle:'En modo selección subcomponentes' }
+    select: { title:'Edición', subtitle:'Modo selección subcomponentes' }
   };
   const info = titles[currentMode] ?? titles.translate;
   document.getElementById('axis-dialog-title').textContent = info.title;
@@ -1261,7 +1229,6 @@ function openAxisDialog(){
     document.getElementById('input-y').value = selectedObject.scale.y.toFixed(2);
     document.getElementById('input-z').value = selectedObject.scale.z.toFixed(2);
   } else {
-    // select: show current object pos
     document.getElementById('input-x').value = selectedObject.position.x.toFixed(2);
     document.getElementById('input-y').value = selectedObject.position.y.toFixed(2);
     document.getElementById('input-z').value = selectedObject.position.z.toFixed(2);
@@ -1292,29 +1259,32 @@ function applyAxisValue(){
 
   enforceLimits(selectedObject);
   const after = snapshotTransform(selectedObject);
-
   pushAction({ type:'transform', id:selectedObject.userData.id, before, after });
 
   updateGizmoPositionForObject();
   closeAxisDialog();
 }
 
-function closeAxisDialog(){
-  axisInputDialog.classList.remove('visible');
-}
+function closeAxisDialog(){ axisInputDialog.classList.remove('visible'); }
 
-// ======= Confirm mini (X / ✓) =======
+// ======= Confirm mini =======
 function showConfirmDialog(){ confirmDialog.classList.add('visible'); }
 function hideConfirmDialog(){ confirmDialog.classList.remove('visible'); }
+
 function continueMoving(){
   hideConfirmDialog();
-  // keep selection + keep gizmo
+  // cancel sub selection only (user can undo if already moved)
+  clearActiveSub();
+  if (selectedObject && currentMode !== 'select') createGizmo(currentMode, selectedObject.position.clone(), selectedObject);
+  if (selectedObject && currentMode === 'select') removeGizmo();
 }
+
 function finishMoving(){
   hideConfirmDialog();
-  // end edit session, keep selected but clear sub selection
+  commitSubEdit();
   clearActiveSub();
 }
+
 function exitManipulation(){
   deselectAll();
 }
@@ -1327,20 +1297,36 @@ function setupTouchEvents(){
     touchStartX = e.clientX; touchStartY = e.clientY;
     dragStartPos.set(e.clientX, e.clientY);
 
-    // if gizmo exists, allow drag handles
     if (currentGizmo){
       const handle = getIntersectedHandle(e.clientX, e.clientY);
       if (handle){
         activeHandle = handle;
         isDragging = true;
 
-        // During gizmo drag: fully freeze camera
+        // freeze camera during actual gizmo drag
         orbit.enableZoom = false;
         orbit.enableRotate = false;
         orbit.enablePan = false;
 
         saveOriginState();
-        if (currentMode === 'translate' && (selectedObject || activeSub)) showMeasurementLine();
+
+        // plane-based drag setup (object translate OR subcomponent translate)
+        const axis = activeHandle.userData.axis;
+
+        const box = selectedObject ? new THREE.Box3().setFromObject(selectedObject) : null;
+        const centerW = box ? box.getCenter(new THREE.Vector3()) : (selectedObject ? selectedObject.position.clone() : new THREE.Vector3());
+        const size = box ? box.getSize(new THREE.Vector3()) : new THREE.Vector3(1,1,1);
+        const radius = Math.max(size.x, size.y, size.z) * 0.55;
+
+        const anchorW = (activeSub?.worldPos) ? activeSub.worldPos.clone() : (currentGizmo ? currentGizmo.position.clone() : centerW.clone());
+
+        if (currentMode === 'translate' || (currentMode === 'select' && activeSub)){
+          beginTranslateDrag(axis, anchorW, centerW, radius);
+        } else {
+          dragState = null;
+        }
+
+        if ((currentMode === 'translate') || (currentMode === 'select' && activeSub)) showMeasurementLine();
       }
     }
   });
@@ -1357,9 +1343,10 @@ function setupTouchEvents(){
     if (isDragging){
       isDragging = false;
       activeHandle = null;
+      dragState = null;
       hideMeasurementLine();
 
-      // restore camera locks according to edit panel (if in edit)
+      // restore camera locks
       if (isEditMode) applyCameraLocks();
       else { orbit.enableZoom = true; orbit.enableRotate = true; orbit.enablePan = true; }
 
@@ -1367,7 +1354,6 @@ function setupTouchEvents(){
       return;
     }
 
-    // tap / double tap
     if (dist < 15){
       const now = Date.now();
       if (now - lastTapTime < 400){
@@ -1387,18 +1373,16 @@ function handleDoubleTap(x, y){
   mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(mouse, camera);
 
-  // If we are in Select mode and object selected: try picking subcomponents first
+  // subcomponents first (only in select mode)
   if (currentMode === 'select' && selectedObject){
     const subPick = pickSubcomponent(selectedObject, subModeVerts, subModeEdges, subModeFaces);
     if (subPick){
       setActiveSub(subPick);
-      // enter edit mode (camera locked by default)
       setEditMode(true);
       return;
     }
   }
 
-  // Else: pick objects
   const intersects = raycaster.intersectObjects(objects, false);
   if (intersects.length > 0){
     const hit = intersects[0].object;
@@ -1421,20 +1405,17 @@ function handleDoubleTap(x, y){
 }
 
 function applySelectionUI(){
-  // highlight
   objects.forEach(o => setObjectSelectedVisual(o, false));
   selectedObjects.forEach(o => setObjectSelectedVisual(o, true));
 
   if (selectedObject){
-    // show top buttons
     exitButton.classList.add('visible');
     spaceToggle.classList.add('visible');
     editValuesBtn.classList.add('visible');
 
-    // enter edit mode on selection (as you requested earlier)
+    // enter edit mode on selection
     setEditMode(true);
 
-    // create object gizmo unless select mode
     if (currentMode !== 'select') createGizmo(currentMode, selectedObject.position.clone(), selectedObject);
     else {
       subtoolbar.classList.add('visible');
@@ -1442,9 +1423,10 @@ function applySelectionUI(){
       removeGizmo();
     }
 
-    // place edit button near object
     updateEditButtonPosition();
-    focusSelected();
+
+    // ✅ Soft focus only (much smaller than before; avoids annoying zoom-in)
+    focusSelectedSoft();
   } else {
     exitButton.classList.remove('visible');
     spaceToggle.classList.remove('visible');
@@ -1504,19 +1486,15 @@ function updateEditButtonPosition(){
 }
 
 // ======= Subcomponent Picking =======
-// Vertex pick: raycast against Points
-// Edge pick: approximate by raycasting against EdgeLines (line segments)
-// Face pick: raycast mesh (face indices)
 function pickSubcomponent(obj, wantVerts, wantEdges, wantFaces){
   ensureSubHelpers(obj);
   const sub = obj.userData.sub;
 
-  // prioritize: vertex > edge > face
   if (wantVerts && sub.vertexPoints){
     const hits = raycaster.intersectObject(sub.vertexPoints, true);
     if (hits.length){
       const hit = hits[0];
-      const idx = hit.index; // point index
+      const idx = hit.index;
       const world = hit.point.clone();
       highlightVertex(obj, idx);
       return { type:'vertex', indices:[idx], worldPos: world };
@@ -1526,8 +1504,6 @@ function pickSubcomponent(obj, wantVerts, wantEdges, wantFaces){
   if (wantEdges && sub.edgeLines){
     const hits = raycaster.intersectObject(sub.edgeLines, true);
     if (hits.length){
-      // We don't get exact vertex pair; we approximate by nearest 2 vertices around hit point.
-      // For editing we pick nearest vertex and a neighbor edge by distance on geometry.
       const hp = hits[0].point.clone();
       const edgePair = approximateEdgeByNearest(obj, hp);
       if (edgePair){
@@ -1541,8 +1517,7 @@ function pickSubcomponent(obj, wantVerts, wantEdges, wantFaces){
     const hits = raycaster.intersectObject(obj, false);
     if (hits.length){
       const h = hits[0];
-      const face = h.face; // contains a,b,c (for non-indexed) but in BufferGeometry it maps
-      // For BufferGeometry from primitives, face has a,b,c referencing positions in "position" attribute.
+      const face = h.face;
       const tri = [face.a, face.b, face.c];
       highlightFace(obj, tri);
       return { type:'face', indices: tri, worldPos: h.point.clone() };
@@ -1556,16 +1531,12 @@ function highlightVertex(obj, idx){
   ensureSubHelpers(obj);
   const pts = obj.userData.sub.vertexPoints;
   const col = pts.geometry.attributes.color;
-  // reset to white then highlight idx in green
-  for (let i=0;i<col.count;i++){
-    col.setXYZ(i, 1,1,1);
-  }
+  for (let i=0;i<col.count;i++) col.setXYZ(i, 1,1,1);
   col.setXYZ(idx, 0.2, 1.0, 0.4);
   col.needsUpdate = true;
 }
 function highlightEdge(obj, pair){
   ensureSubHelpers(obj);
-  // just make edge lines stronger opacity
   obj.userData.sub.edgeLines.material.opacity = 0.9;
   obj.userData.sub.edgeLines.material.color.setHex(CFG.subSelColor);
 }
@@ -1578,10 +1549,8 @@ function highlightFace(obj, tri){
 function approximateEdgeByNearest(obj, worldPoint){
   const geom = obj.geometry;
   const pos = geom.attributes.position;
-  // Convert world point to local
   const local = obj.worldToLocal(worldPoint.clone());
 
-  // nearest vertex
   let best = -1;
   let bestD = Infinity;
   for (let i=0;i<pos.count;i++){
@@ -1591,7 +1560,6 @@ function approximateEdgeByNearest(obj, worldPoint){
   }
   if (best < 0) return null;
 
-  // pick neighbor: choose the second nearest (simple + robust enough for primitives)
   let best2 = -1;
   let bestD2 = Infinity;
   for (let i=0;i<pos.count;i++){
@@ -1604,7 +1572,75 @@ function approximateEdgeByNearest(obj, worldPoint){
   return [best, best2];
 }
 
-// ======= Gizmo Drag Manipulation =======
+// ======= Plane-based drag helpers =======
+function getCameraDir() {
+  const d = new THREE.Vector3();
+  camera.getWorldDirection(d);
+  return d.normalize();
+}
+function intersectDragPlane(screenX, screenY, plane) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  mouse.x = ((screenX - rect.left) / rect.width) * 2 - 1;
+  mouse.y = -((screenY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(mouse, camera);
+  const p = new THREE.Vector3();
+  const ok = raycaster.ray.intersectPlane(plane, p);
+  return ok ? p : null;
+}
+function makeAxisDragPlane(axisDirW, anchorPointW) {
+  const camDir = getCameraDir();
+  let n = new THREE.Vector3().crossVectors(axisDirW, camDir);
+  if (n.lengthSq() < 1e-8) {
+    n = new THREE.Vector3().crossVectors(axisDirW, new THREE.Vector3(0,1,0));
+    if (n.lengthSq() < 1e-8) n = new THREE.Vector3().crossVectors(axisDirW, new THREE.Vector3(1,0,0));
+  }
+  const planeNormal = new THREE.Vector3().crossVectors(n, axisDirW).normalize();
+  return new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, anchorPointW);
+}
+function beginTranslateDrag(axis, anchorWorld, objCenterWorld, objRadius) {
+  const baseCamDist = camera.position.distanceTo(objCenterWorld);
+  let plane;
+  let axisDirW = null;
+
+  if (axis === 'free') {
+    plane = new THREE.Plane().setFromNormalAndCoplanarPoint(getCameraDir(), anchorWorld);
+  } else {
+    axisDirW = axisToVec(axis);
+    if (currentSpace === 'local' && selectedObject) axisDirW.applyQuaternion(selectedObject.quaternion).normalize();
+    plane = makeAxisDragPlane(axisDirW, anchorWorld);
+  }
+
+  const startHit = intersectDragPlane(dragStartPos.x, dragStartPos.y, plane) || anchorWorld.clone();
+
+  dragState = {
+    mode: 'translate',
+    axis,
+    plane,
+    startHit: startHit.clone(),
+    axisDirW: axisDirW ? axisDirW.clone() : null,
+    objCenterW: objCenterWorld.clone(),
+    baseCamDist,
+    movedMax: 0,
+    objRadius
+  };
+}
+function updateIntelligentZoomFromMoved(movedDistance) {
+  if (!dragState) return;
+  const sizeFactor = Math.max(1, dragState.objRadius * 1.2);
+  const target = dragState.baseCamDist + (movedDistance * 2.0) + (movedDistance / sizeFactor);
+  const clamped = THREE.MathUtils.clamp(target, CFG.minZoom, CFG.maxZoom);
+
+  const current = camera.position.distanceTo(dragState.objCenterW);
+  const newDist = THREE.MathUtils.lerp(current, clamped, 0.18);
+
+  const dir = camera.position.clone().sub(dragState.objCenterW).normalize();
+  camera.position.copy(dragState.objCenterW.clone().add(dir.multiplyScalar(newDist)));
+  orbit.target.copy(dragState.objCenterW);
+  camera.lookAt(dragState.objCenterW);
+  orbit.update();
+}
+
+// ======= Gizmo picking + manipulation =======
 function saveOriginState(){
   if (activeSub){
     originPosition.copy(activeSub.worldPos);
@@ -1629,7 +1665,6 @@ function getIntersectedHandle(x, y){
   const hits = raycaster.intersectObjects(handles, true);
   if (!hits.length) return null;
 
-  // bubble up to top object inside gizmo
   let o = hits[0].object;
   while (o.parent && o.parent !== currentGizmo) o = o.parent;
   return o;
@@ -1639,73 +1674,78 @@ function manipulateByGizmo(x, y){
   if (!activeHandle) return;
   const axis = activeHandle.userData.axis;
 
-  const movementScale = 0.05;
   const scaleSpeed = 0.01;
   const rotationScale = 0.02;
 
-  // For subcomponent editing we only support translate/scale moves on indices
+  // ===== Subcomponent translate (plane-based, smooth) =====
   if (currentMode === 'select' && selectedObject && activeSub){
-    const delta = computeDelta(axis, x, y, movementScale);
-    // Convert delta (world) to local if needed
-    const localDelta = selectedObject.worldToLocal(selectedObject.position.clone().add(delta)).sub(selectedObject.position.clone()); // approximate
-    const indices = activeSub.indices;
+    if (!dragState || dragState.mode !== 'translate') return;
 
-    if (activeSub.type === 'vertex'){
-      applyVertexDelta(selectedObject, indices, localDelta);
-      // push undo as "vertexEdit" at end of drag: here we do incremental; keep simple: push on every move would spam.
-      // So we'll only store last delta at pointerup? We don't have pointerup hook here; we will store accumulating delta in activeSub.
-      if (!activeSub.acc) activeSub.acc = new THREE.Vector3();
-      activeSub.acc.add(localDelta);
-    } else if (activeSub.type === 'edge'){
-      applyVertexDelta(selectedObject, indices, localDelta);
-      if (!activeSub.acc) activeSub.acc = new THREE.Vector3();
-      activeSub.acc.add(localDelta);
-    } else if (activeSub.type === 'face'){
-      applyVertexDelta(selectedObject, indices, localDelta);
-      if (!activeSub.acc) activeSub.acc = new THREE.Vector3();
-      activeSub.acc.add(localDelta);
+    const hit = intersectDragPlane(x, y, dragState.plane);
+    if (!hit) return;
+
+    let worldDelta = hit.clone().sub(dragState.startHit);
+
+    if (dragState.axisDirW){
+      const s = worldDelta.dot(dragState.axisDirW);
+      worldDelta = dragState.axisDirW.clone().multiplyScalar(s);
     }
+
+    // world -> local delta (exact)
+    const p0 = selectedObject.worldToLocal(selectedObject.position.clone());
+    const p1 = selectedObject.worldToLocal(selectedObject.position.clone().add(worldDelta));
+    const localDelta = p1.sub(p0);
+
+    const indices = activeSub.indices;
+    applyVertexDelta(selectedObject, indices, localDelta);
+
+    if (!activeSub.acc) activeSub.acc = new THREE.Vector3();
+    activeSub.acc.add(localDelta);
 
     refreshSubMeshes(selectedObject);
 
-    // update gizmo world position to follow
-    const world = selectedObject.localToWorld(getSubCentroidLocal(selectedObject, indices));
-    activeSub.worldPos.copy(world);
-    currentGizmo.position.copy(world);
+    const newWorld = selectedObject.localToWorld(getSubCentroidLocal(selectedObject, indices));
+    activeSub.worldPos.copy(newWorld);
+    if (currentGizmo) currentGizmo.position.copy(newWorld);
+
+    currentDistance = newWorld.distanceTo(originPosition);
+    updateIntelligentZoomFromMoved(currentDistance);
     updateMeasurementLine();
+
+    // incremental drag
+    dragState.startHit.copy(hit);
     dragStartPos.set(x,y);
     return;
   }
 
-  // Object transform modes
+  // ===== Object modes =====
   if (!selectedObject) return;
 
   if (currentMode === 'translate'){
-    const delta = computeDelta(axis, x, y, movementScale);
+    if (!dragState || dragState.mode !== 'translate') return;
 
-    if (axis === 'free'){
-      // free: x/z plane
-      const dx = (x - dragStartPos.x) * movementScale;
-      const dz = (y - dragStartPos.y) * movementScale;
-      if (currentSpace === 'local'){
-        const v = new THREE.Vector3(dx,0,dz).applyQuaternion(selectedObject.quaternion);
-        selectedObject.position.add(v);
-      } else {
-        selectedObject.position.x += dx;
-        selectedObject.position.z += dz;
-      }
-    } else {
-      const axisVec = axisToVec(axis);
-      let v = axisVec.multiplyScalar(delta.length());
-      // use sign from delta projected
-      v.copy(delta);
+    const hit = intersectDragPlane(x, y, dragState.plane);
+    if (!hit) return;
 
-      if (currentSpace === 'local') v.applyQuaternion(selectedObject.quaternion);
-      selectedObject.position.add(v);
+    let worldDelta = hit.clone().sub(dragState.startHit);
+
+    if (dragState.axisDirW){
+      const s = worldDelta.dot(dragState.axisDirW);
+      worldDelta = dragState.axisDirW.clone().multiplyScalar(s);
     }
+
+    selectedObject.position.add(worldDelta);
+
     enforceLimits(selectedObject);
     updateMeasurementLine();
     updateGizmoPositionForObject();
+
+    // intelligent zoom away as moved
+    currentDistance = selectedObject.position.distanceTo(originPosition);
+    updateIntelligentZoomFromMoved(currentDistance);
+
+    dragState.startHit.copy(hit);
+    dragStartPos.set(x,y);
 
   } else if (currentMode === 'rotate'){
     const deltaAng = (x - dragStartPos.x + y - dragStartPos.y) * rotationScale;
@@ -1715,10 +1755,10 @@ function manipulateByGizmo(x, y){
       else rotateWorld(selectedObject, ax, deltaAng);
     }
     updateGizmoPositionForObject();
+    dragStartPos.set(x,y);
 
   } else if (currentMode === 'scale'){
-    // inverted: up grows
-    const deltaS = (dragStartPos.y - y) * scaleSpeed;
+    const deltaS = (dragStartPos.y - y) * scaleSpeed; // inverted: up grows
     if (axis === 'x') selectedObject.scale.x = clampScale(selectedObject.scale.x + deltaS);
     else if (axis === 'y') selectedObject.scale.y = clampScale(selectedObject.scale.y + deltaS);
     else if (axis === 'z') selectedObject.scale.z = clampScale(selectedObject.scale.z + deltaS);
@@ -1727,18 +1767,8 @@ function manipulateByGizmo(x, y){
       selectedObject.scale.set(s,s,s);
     }
     updateGizmoPositionForObject();
+    dragStartPos.set(x,y);
   }
-
-  dragStartPos.set(x,y);
-}
-
-function computeDelta(axis, x, y, movementScale){
-  // Basic mapping: X with screen X, Y with screen Y, Z with screen Y
-  if (axis === 'x') return new THREE.Vector3((x - dragStartPos.x) * movementScale, 0, 0);
-  if (axis === 'y') return new THREE.Vector3(0, -(y - dragStartPos.y) * movementScale, 0);
-  if (axis === 'z') return new THREE.Vector3(0, 0, (y - dragStartPos.y) * movementScale);
-  if (axis === 'free') return new THREE.Vector3((x - dragStartPos.x) * movementScale, 0, (y - dragStartPos.y) * movementScale);
-  return new THREE.Vector3();
 }
 
 function axisToVec(a){
@@ -1756,12 +1786,12 @@ function rotateWorld(obj, worldAxis, angle){
 
 function clampScale(v){ return Math.max(CFG.minScale, Math.min(CFG.maxScale, v)); }
 
-// ======= Apply vertex delta =======
-function applyVertexDelta(obj, indices, deltaLocal){
+// ======= Vertex editing =======
+function applyVertexDelta(obj, indices, delta){
   const geom = obj.geometry;
   const pos = geom.attributes.position;
   for (const i of indices){
-    pos.setXYZ(i, pos.getX(i) + deltaLocal.x, pos.getY(i) + deltaLocal.y, pos.getZ(i) + deltaLocal.z);
+    pos.setXYZ(i, pos.getX(i) + delta.x, pos.getY(i) + delta.y, pos.getZ(i) + delta.z);
   }
   pos.needsUpdate = true;
   geom.computeVertexNormals();
@@ -1770,8 +1800,7 @@ function applyVertexDelta(obj, indices, deltaLocal){
 }
 
 function getSubCentroidLocal(obj, indices){
-  const geom = obj.geometry;
-  const pos = geom.attributes.position;
+  const pos = obj.geometry.attributes.position;
   const c = new THREE.Vector3();
   for (const i of indices){
     c.x += pos.getX(i); c.y += pos.getY(i); c.z += pos.getZ(i);
@@ -1780,12 +1809,25 @@ function getSubCentroidLocal(obj, indices){
   return c;
 }
 
+function commitSubEdit(){
+  if (!selectedObject || !activeSub || !activeSub.acc) return;
+  const d = activeSub.acc.clone();
+  activeSub.acc = null;
+  if (d.lengthSq() < 1e-10) return;
+  pushAction({
+    type:'vertexEdit',
+    id: selectedObject.userData.id,
+    indices: activeSub.indices.slice(),
+    delta: { x: d.x, y: d.y, z: d.z }
+  });
+}
+
 // ======= Measurement =======
 function showMeasurementLine(){ measurementLine.classList.add('visible'); distanceLabel.classList.add('visible'); }
 function hideMeasurementLine(){ measurementLine.classList.remove('visible'); distanceLabel.classList.remove('visible'); }
+
 function updateMeasurementLine(){
   if (!measurementLine.classList.contains('visible')) return;
-
   const objPos = (activeSub?.worldPos) ? activeSub.worldPos : (selectedObject ? selectedObject.position : null);
   if (!objPos) return;
 
@@ -1839,10 +1881,9 @@ function spawn(type){
   objects.push(mesh);
   applyRenderMode(mesh, currentRenderMode);
 
-  // undo add
   pushAction({ type:'add', items:[{ prim:{type, id}, state:snapshotTransform(mesh) }] });
 
-  // do NOT force "move" activation on create: keep current mode
+  // no auto-activate move on create; keep current mode
 }
 
 function createPrimitive(type, id){
@@ -1884,7 +1925,7 @@ function createPrimitive(type, id){
 function del(){
   if (!selectedObjects.length) return;
 
-  const items = selectedObjects.map(o => ({ prim:{type:o.geometry.type ? 'custom' : 'box', id:o.userData.id}, state:snapshotTransform(o) }));
+  const items = selectedObjects.map(o => ({ prim:{type:'custom', id:o.userData.id}, state:snapshotTransform(o) }));
   const ids = selectedObjects.map(o => o.userData.id);
 
   pushAction({ type:'delete', ids, items });
@@ -1942,78 +1983,12 @@ function onResize(){
 function animate(){
   requestAnimationFrame(animate);
 
-  // keep edit button updated
   if (selectedObject && editValuesBtn.classList.contains('visible')) updateEditButtonPosition();
-
-  // If sub selection exists, keep gizmo aligned
-  if (currentMode === 'select' && activeSub && currentGizmo){
-    currentGizmo.position.copy(activeSub.worldPos);
-  }
+  if (currentMode === 'select' && activeSub && currentGizmo) currentGizmo.position.copy(activeSub.worldPos);
 
   orbit.update();
   renderer.render(scene, camera);
-
-  // If we edited vertices during drag, on frame end we can commit undo once drag ends.
-  // (Commit happens when user taps ✓ or ✕; we commit on ✓ as "apply".)
 }
-
-// ======= Commit sub edit on ✓ =======
-function commitSubEdit(){
-  if (!selectedObject || !activeSub || !activeSub.acc) return;
-  const delta = activeSub.acc.clone();
-  activeSub.acc = null;
-  if (delta.lengthSq() < 1e-10) return;
-
-  // store vertex edit undo
-  pushAction({
-    type:'vertexEdit',
-    id: selectedObject.userData.id,
-    indices: activeSub.indices.slice(),
-    delta: { x: delta.x, y: delta.y, z: delta.z }
-  });
-}
-
-// Hook ✓ (finishMoving) to commit
-const _finishMoving = finishMoving;
-window.finishMoving = function(){
-  commitSubEdit();
-  _finishMoving();
-}
-
-// ======= Fix confirm buttons to commit on ✓, discard on ✕ =======
-window.continueMoving = function(){
-  // ✕ cancels current sub selection (does not undo mid changes; user can undo with ⟲)
-  hideConfirmDialog();
-  clearActiveSub();
-  if (selectedObject && currentMode !== 'select') createGizmo(currentMode, selectedObject.position.clone(), selectedObject);
-  if (selectedObject && currentMode === 'select') removeGizmo();
-};
-
-// ======= Ensure proper camera editing behavior =======
-window.exitManipulation = function(){
-  // leaving edit -> normal camera
-  deselectAll();
-};
-
-// Expose
-window.setTheme = setTheme;
-
-// ======= Make selection enter edit mode camera locks =======
-function setEditOnSelect(){
-  setEditMode(true);
-  // in edit: camera frozen unless toggles on right
-  applyCameraLocks();
-}
-
-(function patchSelectionEditMode(){
-  // when an object becomes selected, enable edit mode locks
-  const originalApplySelectionUI = applySelectionUI;
-  applySelectionUI = function(){
-    originalApplySelectionUI();
-    if (selectedObject) setEditOnSelect();
-  };
-})();
-
 </script>
 </body>
 </html>
