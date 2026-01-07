@@ -1,4 +1,3 @@
-/* editor-core.js */
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { setupSubcomponents } from './editor-subcomponents.js';
@@ -328,7 +327,7 @@ function beginTranslateDrag(axis, anchorW, objCenterW, objRadius) {
   };
 }
 
-/* ✅ Zoom inteligente */
+/* ✅ Zoom inteligente: MUY leve, SOLO si se sale del encuadre */
 function updateIntelligentZoomFromMoved(movedDistance) {
   if (!dragState) return;
   if (!isWorldPointOffscreen(dragState.objCenterW, 0.10)) return;
@@ -392,7 +391,7 @@ function snapView(name) {
   orbit.update();
 }
 
-/* ✅ Auto-focus al seleccionar */
+/* ✅ Auto-focus al seleccionar: en móvil NO hace zoom (solo recenter si se salió) */
 function focusSelectedSoft() {
   if (!selectedObject) return;
 
@@ -1190,6 +1189,9 @@ function setupPointerEvents() {
       // push transform action (for objects only) if we were not in sub selection
       if (selectedObject && currentMode !== 'select') {
         // record transform on mouse-up if changed
+        // (simple strategy: we snapshot at down? for brevity, we capture from originPosition not enough)
+        // We'll do a safe minimal: always push "transform" for object edits by comparing last saved snapshot.
+        // To keep it robust, store a "dragBeforeSnap" in userData.
         const before = selectedObject.userData._dragBefore;
         if (before) {
           const after = snapshotTransform(selectedObject);
@@ -1235,8 +1237,6 @@ function updateEditButtonPosition() {
 /* =============================
    INIT
 ============================= */
-let subAPI = null;
-
 function init() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(CFG.bg);
@@ -1287,8 +1287,8 @@ function init() {
     renderer,
     raycaster,
     mouse,
-    pushAction,
-    updateGizmoPose,
+    pushAction,          // so it can create actions if needed
+    updateGizmoPose,     // to refresh gizmo when sub moves
     applyRenderMode,
     getSelectedObject: () => selectedObject,
     isMobile: () => IS_MOBILE
@@ -1383,16 +1383,24 @@ function init() {
 }
 
 /* =============================
+   SELECTION (object) — performed by submodule? no, here.
+   We let double-tap handle selection.
+   Multi selection is handled in handleDoubleTap.
+============================= */
+
+/* =============================
    ANIMATE
 ============================= */
+let subAPI = null;
+
 function animate() {
   requestAnimationFrame(animate);
 
   if (selectedObject && editValuesBtn.classList.contains('visible')) updateEditButtonPosition();
-  if (selectedObject && currentMode === 'select' && subAPI) subAPI.applySubVisibility(selectedObject);
+  if (selectedObject && currentMode === 'select') subAPI.applySubVisibility(selectedObject);
 
-  if (orbit) orbit.update();
-  if (renderer && scene && camera) renderer.render(scene, camera);
+  orbit.update();
+  renderer.render(scene, camera);
 }
 
 /* =============================
@@ -1402,7 +1410,7 @@ init();
 animate();
 
 /* =============================
-   Expose debug
+   Expose a minimal debug API (optional)
 ============================= */
 window._mr = {
   get scene() { return scene; },
