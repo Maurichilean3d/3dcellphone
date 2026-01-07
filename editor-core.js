@@ -12,9 +12,7 @@ const CFG = {
   selColor: 0xFF9500,
   selEdge: 0xFFB84D,
 
-  subColorA: 0x34C759,
-  subColorB: 0x00BFFF,
-
+  subAccent: 0x00BFFF, // blue for sub-selection highlight
   minScale: 0.05,
   maxScale: 10.0,
   minZoom: 2,
@@ -47,11 +45,11 @@ const spaceText = document.getElementById('space-text');
 const editValuesBtn = document.getElementById('edit-values-btn');
 
 const subtoolbar = document.getElementById('subtoolbar');
-const btnSubMulti = document.getElementById('sub-multi');
-const btnSubAll = document.getElementById('sub-all');
 const btnSubVerts = document.getElementById('sub-verts');
 const btnSubEdges = document.getElementById('sub-edges');
 const btnSubFaces = document.getElementById('sub-faces');
+const btnSubExplode = document.getElementById('sub-explode');
+const btnSubClear = document.getElementById('sub-clear');
 
 const btnUndo = document.getElementById('btn-undo');
 const btnRedo = document.getElementById('btn-redo');
@@ -96,13 +94,9 @@ let gridTexture = null;
 let currentRenderMode = 'flat';
 
 /* =============================
-   EDIT/SELECT STATE
+   STATE
 ============================= */
 let selectedObject = null;
-let selectedObjects = [];
-let multiSelectEnabled = false;
-let allSelectEnabled = false;
-
 let currentMode = 'translate'; // translate|rotate|scale|select
 let currentSpace = 'world';    // world|local
 
@@ -115,7 +109,6 @@ let touchStart = new THREE.Vector2();
 let lastTapTime = 0;
 
 let originPosition = new THREE.Vector3();
-let currentDistance = 0;
 
 /* =============================
    CAMERA LOCKS DURING EDIT
@@ -160,7 +153,7 @@ btnCamOrbit.addEventListener('click', () => {
 });
 
 /* =============================
-   UNDO / REDO (actions)
+   UNDO / REDO
 ============================= */
 const undoStack = [];
 const redoStack = [];
@@ -216,9 +209,8 @@ function performForward(a) {
   } else if (a.type === 'transform') {
     const obj = findById(a.id);
     if (obj) applySnapshot(obj, a.after);
-  } else if (a.type === 'vertexEdit') {
-    // forward/inverse handled in subcomponents module via exported hooks
-    subAPI.applyVertexEditForward(a);
+  } else if (a.type === 'subEdit') {
+    subAPI.applySubEditForward(a);
   }
 }
 function performInverse(a) {
@@ -239,8 +231,8 @@ function performInverse(a) {
   } else if (a.type === 'transform') {
     const obj = findById(a.id);
     if (obj) applySnapshot(obj, a.before);
-  } else if (a.type === 'vertexEdit') {
-    subAPI.applyVertexEditInverse(a);
+  } else if (a.type === 'subEdit') {
+    subAPI.applySubEditInverse(a);
   }
 }
 function undo() {
@@ -266,18 +258,18 @@ function isWorldPointOffscreen(worldPoint, margin = 0.12) {
   const m = margin * 2;
   return (v.x < -1 + m) || (v.x > 1 - m) || (v.y < -1 + m) || (v.y > 1 - m);
 }
-
-/* =============================
-   DRAG PLANE (smooth translate)
-============================= */
-let dragState = null;
-// { plane, startHit, axisDirW|null, objCenterW, baseCamDist, objRadius }
-
 function getCameraDir() {
   const d = new THREE.Vector3();
   camera.getWorldDirection(d);
   return d.normalize();
 }
+
+/* =============================
+   DRAG PLANE (translate)
+============================= */
+let dragState = null;
+// { plane, startHit, axisDirW|null, baseCamDist, objRadius, anchorCenterW }
+
 function intersectPlane(screenX, screenY, plane) {
   const rect = renderer.domElement.getBoundingClientRect();
   mouse.x = ((screenX - rect.left) / rect.width) * 2 - 1;
@@ -286,6 +278,12 @@ function intersectPlane(screenX, screenY, plane) {
   const p = new THREE.Vector3();
   const ok = raycaster.ray.intersectPlane(plane, p);
   return ok ? p : null;
+}
+function axisToVec(a) {
+  if (a === 'x') return new THREE.Vector3(1, 0, 0);
+  if (a === 'y') return new THREE.Vector3(0, 1, 0);
+  if (a === 'z') return new THREE.Vector3(0, 0, 1);
+  return new THREE.Vector3(1, 0, 0);
 }
 function makeAxisDragPlane(axisDirW, anchorPointW) {
   const camDir = getCameraDir();
@@ -297,13 +295,7 @@ function makeAxisDragPlane(axisDirW, anchorPointW) {
   const planeNormal = new THREE.Vector3().crossVectors(n, axisDirW).normalize();
   return new THREE.Plane().setFromNormalAndCoplanarPoint(planeNormal, anchorPointW);
 }
-function axisToVec(a) {
-  if (a === 'x') return new THREE.Vector3(1, 0, 0);
-  if (a === 'y') return new THREE.Vector3(0, 1, 0);
-  if (a === 'z') return new THREE.Vector3(0, 0, 1);
-  return new THREE.Vector3(1, 0, 0);
-}
-function beginTranslateDrag(axis, anchorW, objCenterW, objRadius) {
+function beginTranslateDrag(axis, anchorW, centerW, objRadius) {
   let plane;
   let axisDirW = null;
 
@@ -321,28 +313,28 @@ function beginTranslateDrag(axis, anchorW, objCenterW, objRadius) {
     plane,
     startHit,
     axisDirW,
-    objCenterW: objCenterW.clone(),
-    baseCamDist: camera.position.distanceTo(objCenterW),
-    objRadius
+    baseCamDist: camera.position.distanceTo(centerW),
+    objRadius,
+    anchorCenterW: centerW.clone()
   };
 }
 
-/* ✅ Zoom inteligente: MUY leve, SOLO si se sale del encuadre */
+/* ✅ Zoom inteligente leve SOLO si se sale del encuadre */
 function updateIntelligentZoomFromMoved(movedDistance) {
   if (!dragState) return;
-  if (!isWorldPointOffscreen(dragState.objCenterW, 0.10)) return;
+  if (!isWorldPointOffscreen(dragState.anchorCenterW, 0.10)) return;
 
   const sizeFactor = Math.max(1, dragState.objRadius * 1.4);
   const target = dragState.baseCamDist + (movedDistance * 0.85) + (movedDistance / (sizeFactor * 2.0));
   const clamped = THREE.MathUtils.clamp(target, CFG.minZoom, CFG.maxZoom);
 
-  const current = camera.position.distanceTo(dragState.objCenterW);
+  const current = camera.position.distanceTo(dragState.anchorCenterW);
   const newDist = THREE.MathUtils.lerp(current, clamped, 0.10);
 
-  const dir = camera.position.clone().sub(dragState.objCenterW).normalize();
-  camera.position.copy(dragState.objCenterW.clone().add(dir.multiplyScalar(newDist)));
-  orbit.target.copy(dragState.objCenterW);
-  camera.lookAt(dragState.objCenterW);
+  const dir = camera.position.clone().sub(dragState.anchorCenterW).normalize();
+  camera.position.copy(dragState.anchorCenterW.clone().add(dir.multiplyScalar(newDist)));
+  orbit.target.copy(dragState.anchorCenterW);
+  camera.lookAt(dragState.anchorCenterW);
   orbit.update();
 }
 
@@ -391,7 +383,7 @@ function snapView(name) {
   orbit.update();
 }
 
-/* ✅ Auto-focus al seleccionar: en móvil NO hace zoom (solo recenter si se salió) */
+/* ✅ Auto-focus al seleccionar: en móvil NO hace zoom, solo recenter si está fuera */
 function focusSelectedSoft() {
   if (!selectedObject) return;
 
@@ -400,16 +392,9 @@ function focusSelectedSoft() {
 
   if (!isWorldPointOffscreen(center, 0.10)) return;
 
-  // recenter suave
   orbit.target.lerp(center, 0.22);
+  if (IS_MOBILE) { orbit.update(); return; }
 
-  // en móvil: sin zoom por selección
-  if (IS_MOBILE) {
-    orbit.update();
-    return;
-  }
-
-  // en desktop: zoom leve solo si muy descalibrado
   const size = box.getSize(new THREE.Vector3());
   const maxSize = Math.max(size.x, size.y, size.z);
   const currentDist = camera.position.distanceTo(orbit.target);
@@ -526,7 +511,10 @@ function createScaleGizmo() {
   return gizmo;
 }
 
-function createGizmoFor(mode, position, targetObject) {
+/**
+ * gizmoScale: 1.0 normal, 0.5 subcomponent (requested)
+ */
+function createGizmoFor(mode, position, targetObject, gizmoScale = 1.0) {
   removeGizmo();
   if (mode === 'translate') currentGizmo = createTranslateGizmo();
   else if (mode === 'rotate') currentGizmo = createRotateGizmo();
@@ -538,15 +526,20 @@ function createGizmoFor(mode, position, targetObject) {
   if (targetObject && currentSpace === 'local') currentGizmo.quaternion.copy(targetObject.quaternion);
   else currentGizmo.quaternion.identity();
 
+  currentGizmo.scale.setScalar(gizmoScale);
   scene.add(currentGizmo);
   return currentGizmo;
 }
 
 function updateGizmoPose() {
   if (!currentGizmo || !selectedObject) return;
-  const subPos = subAPI.getActiveSubWorldPos();
-  if (currentMode === 'select' && subPos) currentGizmo.position.copy(subPos);
-  else currentGizmo.position.copy(selectedObject.position);
+
+  if (currentMode === 'select') {
+    const p = subAPI.getSelectionWorldCenter();
+    if (p) currentGizmo.position.copy(p);
+  } else {
+    currentGizmo.position.copy(selectedObject.position);
+  }
 
   if (currentSpace === 'local') currentGizmo.quaternion.copy(selectedObject.quaternion);
   else currentGizmo.quaternion.identity();
@@ -574,7 +567,7 @@ function setObjectSelectedVisual(obj, on) {
 
 function applySelectionUI() {
   objects.forEach(o => setObjectSelectedVisual(o, false));
-  selectedObjects.forEach(o => setObjectSelectedVisual(o, true));
+  if (selectedObject) setObjectSelectedVisual(selectedObject, true);
 
   if (selectedObject) {
     btnExit.classList.add('visible');
@@ -586,11 +579,14 @@ function applySelectionUI() {
     if (currentMode === 'select') {
       subtoolbar.classList.add('visible');
       subAPI.applySubVisibility(selectedObject);
-      removeGizmo();
+      // Create subcomponent gizmo ONLY when there is sub selection
+      const center = subAPI.getSelectionWorldCenter();
+      if (center) createGizmoFor('translate', center, selectedObject, 0.5);
+      else removeGizmo();
     } else {
       subtoolbar.classList.remove('visible');
-      subAPI.clearActiveSub();
-      createGizmoFor(currentMode, selectedObject.position, selectedObject);
+      subAPI.clearSelection();
+      createGizmoFor(currentMode, selectedObject.position, selectedObject, 1.0);
     }
 
     updateEditButtonPosition();
@@ -601,22 +597,16 @@ function applySelectionUI() {
     editValuesBtn.classList.remove('visible');
 
     subtoolbar.classList.remove('visible');
-    subAPI.clearActiveSub();
+    subAPI.clearSelection();
     setEditMode(false);
     removeGizmo();
+    hideConfirm();
   }
 }
 
 function deselectAll() {
   selectedObject = null;
-  selectedObjects = [];
-  multiSelectEnabled = false;
-  allSelectEnabled = false;
-
-  btnSubMulti.classList.remove('active');
-  btnSubAll.classList.remove('active');
-
-  subAPI.clearActiveSub();
+  subAPI?.clearSelection?.();
   applySelectionUI();
 }
 
@@ -633,35 +623,16 @@ function setMode(mode) {
     if (currentMode === 'select') {
       subtoolbar.classList.add('visible');
       subAPI.applySubVisibility(selectedObject);
-      subAPI.clearActiveSub();
-      removeGizmo();
+      const center = subAPI.getSelectionWorldCenter();
+      if (center) createGizmoFor('translate', center, selectedObject, 0.5);
+      else removeGizmo();
     } else {
       subtoolbar.classList.remove('visible');
-      subAPI.clearActiveSub();
-      createGizmoFor(currentMode, selectedObject.position, selectedObject);
+      subAPI.clearSelection();
+      createGizmoFor(currentMode, selectedObject.position, selectedObject, 1.0);
+      hideConfirm();
     }
   }
-}
-
-function toggleMultiSelect() {
-  multiSelectEnabled = !multiSelectEnabled;
-  btnSubMulti.classList.toggle('active', multiSelectEnabled);
-  if (!multiSelectEnabled && selectedObject) {
-    selectedObjects = [selectedObject];
-    applySelectionUI();
-  }
-}
-function toggleAllSelection() {
-  allSelectEnabled = !allSelectEnabled;
-  btnSubAll.classList.toggle('active', allSelectEnabled);
-
-  if (allSelectEnabled) {
-    selectedObjects = [...objects];
-    selectedObject = selectedObjects[0] ?? null;
-  } else {
-    selectedObjects = selectedObject ? [selectedObject] : [];
-  }
-  applySelectionUI();
 }
 
 /* =============================
@@ -704,8 +675,6 @@ function toScreenPosition(position) {
 function updateMeasureLine(worldPos) {
   if (!measurementLine.classList.contains('visible')) return;
 
-  currentDistance = worldPos.distanceTo(originPosition);
-
   const a = toScreenPosition(originPosition);
   const b = toScreenPosition(worldPos);
 
@@ -717,7 +686,7 @@ function updateMeasureLine(worldPos) {
   originDot.setAttribute('cx', a.x);
   originDot.setAttribute('cy', a.y);
 
-  distanceLabel.textContent = `${currentDistance.toFixed(2)} m`;
+  distanceLabel.textContent = `${worldPos.distanceTo(originPosition).toFixed(2)} m`;
   distanceLabel.style.left = ((a.x + b.x) / 2) + 'px';
   distanceLabel.style.top = (((a.y + b.y) / 2) - 30) + 'px';
 }
@@ -732,7 +701,7 @@ function openAxisDialog() {
     translate: ['Posición Exacta', 'Ingresa X, Y, Z'],
     rotate: ['Rotación Exacta', 'Grados (°)'],
     scale: ['Escala Exacta', 'Factores X, Y, Z'],
-    select: ['Edición', 'Selecciona subcomponentes']
+    select: ['Selección', 'Edita subcomponentes con el gizmo']
   };
   const [t, s] = titles[currentMode] ?? titles.translate;
   axisTitle.textContent = t;
@@ -798,17 +767,24 @@ btnClose.addEventListener('click', closeAxisDialog);
 ============================= */
 function showConfirm() { confirmDialog.classList.add('visible'); }
 function hideConfirm() { confirmDialog.classList.remove('visible'); }
+
 btnCancel.addEventListener('click', () => {
-  // cancelar: no deshace automáticamente, pero cierra y permite seguir
-  hideConfirm();
-  subAPI.clearActiveSub();
-  if (selectedObject && currentMode !== 'select') createGizmoFor(currentMode, selectedObject.position, selectedObject);
+  // Cancel sub edits: revert to baseline if any, keep selection mode available
+  subAPI.cancelToBaseline();
+  const center = subAPI.getSelectionWorldCenter();
+  if (currentMode === 'select' && selectedObject) {
+    if (center) createGizmoFor('translate', center, selectedObject, 0.5);
+    else removeGizmo();
+  }
+  hideMeasure();
 });
+
 btnOk.addEventListener('click', () => {
-  hideConfirm();
-  // commit sub edit si aplica
-  subAPI.commitSubEditIfAny((action) => pushAction(action));
-  subAPI.clearActiveSub();
+  // Commit sub edit if any
+  const action = subAPI.commitSelectionDeltaAsAction(selectedObject?.userData?.id);
+  if (action) pushAction(action);
+  subAPI.setBaselineFromCurrent(); // new baseline after commit
+  hideMeasure();
 });
 
 /* =============================
@@ -853,6 +829,7 @@ function createPrimitive(type, id) {
   mesh.receiveShadow = true;
 
   mesh.userData.id = id;
+  mesh.userData.primType = type; // ✅ important for undo delete
   mesh.userData.originalColor = CFG.objColor;
 
   const edges = new THREE.LineSegments(
@@ -896,17 +873,17 @@ function applyRenderMode(mesh, mode) {
   if (mode === 'flat') {
     m.map = null;
     m.roughness = 0.45;
-    if (!selectedObjects.includes(mesh)) m.color.setHex(mesh.userData.originalColor ?? CFG.objColor);
+    if (mesh !== selectedObject) m.color.setHex(mesh.userData.originalColor ?? CFG.objColor);
     if (e) e.visible = true;
   } else if (mode === 'clay') {
     m.map = null;
     m.roughness = 1.0;
-    if (!selectedObjects.includes(mesh)) m.color.setHex(0xd0d0d5);
+    if (mesh !== selectedObject) m.color.setHex(0xd0d0d5);
     if (e) e.visible = false;
   } else if (mode === 'tech') {
     m.map = gridTexture;
     m.roughness = 0.55;
-    if (!selectedObjects.includes(mesh)) m.color.setHex(0xffffff);
+    if (mesh !== selectedObject) m.color.setHex(0xffffff);
     if (e) e.visible = true;
   }
   m.needsUpdate = true;
@@ -916,28 +893,26 @@ function applyRenderMode(mesh, mode) {
    DELETE / COLOR
 ============================= */
 btnDelete.addEventListener('click', () => {
-  if (!selectedObjects.length) return;
+  if (!selectedObject) return;
 
-  const ids = selectedObjects.map(o => o.userData.id);
-  const items = selectedObjects.map(o => ({
-    prim: { type: o.userData.primType ?? 'box', id: o.userData.id },
-    state: snapshotTransform(o)
-  }));
+  const ids = [selectedObject.userData.id];
+  const items = [{
+    prim: { type: selectedObject.userData.primType ?? 'box', id: selectedObject.userData.id },
+    state: snapshotTransform(selectedObject)
+  }];
 
   pushAction({ type: 'delete', ids, items });
 
-  const toRemove = [...selectedObjects];
+  const toRemove = selectedObject;
   deselectAll();
-  toRemove.forEach(o => removeObjectFromScene(o));
+  removeObjectFromScene(toRemove);
 });
 
 btnColor.addEventListener('click', () => {
-  if (!selectedObjects.length) return;
-  selectedObjects.forEach(o => {
-    const c = Math.random() * 0xffffff;
-    o.material.color.setHex(c);
-    o.userData.originalColor = c;
-  });
+  if (!selectedObject) return;
+  const c = Math.random() * 0xffffff;
+  selectedObject.material.color.setHex(c);
+  selectedObject.userData.originalColor = c;
   applySelectionUI();
 });
 
@@ -946,7 +921,6 @@ btnColor.addEventListener('click', () => {
 ============================= */
 function enforceLimits(obj) {
   if (!obj) return;
-
   if (obj.position.length() > CFG.maxDistance) obj.position.setLength(CFG.maxDistance);
   if (obj.position.y < 0) obj.position.y = 0;
 
@@ -978,7 +952,7 @@ function getIntersectedHandle(x, y) {
 }
 
 /* =============================
-   OBJECT / SUBCOMPONENT DRAG
+   TRANSFORM / SUB-DRAG
 ============================= */
 function rotateWorld(obj, worldAxis, angle) {
   const q = new THREE.Quaternion().setFromAxisAngle(worldAxis, angle);
@@ -987,17 +961,19 @@ function rotateWorld(obj, worldAxis, angle) {
 }
 
 function saveOriginState() {
-  const subPos = subAPI.getActiveSubWorldPos();
-  if (subPos) originPosition.copy(subPos);
-  else if (selectedObject) originPosition.copy(selectedObject.position);
+  if (!selectedObject) return;
+  const center = (currentMode === 'select')
+    ? (subAPI.getSelectionWorldCenter() ?? selectedObject.position.clone())
+    : selectedObject.position.clone();
+  originPosition.copy(center);
 }
 
 function manipulateByGizmo(x, y) {
-  if (!activeHandle) return;
+  if (!activeHandle || !selectedObject) return;
   const axis = activeHandle.userData.axis;
 
-  // 1) subcomponent translate (handled by submodule)
-  if (currentMode === 'select' && selectedObject && subAPI.hasActiveSub()) {
+  // subcomponent translate (select mode)
+  if (currentMode === 'select' && subAPI.hasSelection()) {
     if (!dragState) return;
     const hit = intersectPlane(x, y, dragState.plane);
     if (!hit) return;
@@ -1008,11 +984,11 @@ function manipulateByGizmo(x, y) {
       worldDelta = dragState.axisDirW.clone().multiplyScalar(s);
     }
 
-    const movedDistance = subAPI.applySubTranslateWorldDelta(selectedObject, worldDelta);
+    const movedDistance = subAPI.applySelectionWorldDelta(selectedObject, worldDelta);
     updateGizmoPose();
 
-    const subPos = subAPI.getActiveSubWorldPos();
-    if (subPos) updateMeasureLine(subPos);
+    const c = subAPI.getSelectionWorldCenter();
+    if (c) updateMeasureLine(c);
 
     updateIntelligentZoomFromMoved(movedDistance);
 
@@ -1021,9 +997,7 @@ function manipulateByGizmo(x, y) {
     return;
   }
 
-  // 2) object transforms
-  if (!selectedObject) return;
-
+  // object transforms
   if (currentMode === 'translate') {
     if (!dragState) return;
     const hit = intersectPlane(x, y, dragState.plane);
@@ -1038,12 +1012,10 @@ function manipulateByGizmo(x, y) {
     selectedObject.position.add(worldDelta);
     enforceLimits(selectedObject);
 
-    const moved = selectedObject.position.distanceTo(originPosition);
     updateMeasureLine(selectedObject.position);
-    updateIntelligentZoomFromMoved(moved);
+    updateIntelligentZoomFromMoved(selectedObject.position.distanceTo(originPosition));
 
     updateGizmoPose();
-
     dragState.startHit.copy(hit);
     dragStart.set(x, y);
 
@@ -1074,48 +1046,39 @@ function manipulateByGizmo(x, y) {
 }
 
 /* =============================
-   DOUBLE TAP: select object or subcomponent
+   DOUBLE TAP SELECTION
 ============================= */
-function toggleInMultiSelection(obj) {
-  const i = selectedObjects.indexOf(obj);
-  if (i >= 0) selectedObjects.splice(i, 1);
-  else selectedObjects.push(obj);
-}
-
 function handleDoubleTap(x, y) {
   const rect = renderer.domElement.getBoundingClientRect();
   mouse.x = ((x - rect.left) / rect.width) * 2 - 1;
   mouse.y = -((y - rect.top) / rect.height) * 2 + 1;
   raycaster.setFromCamera(mouse, camera);
 
-  // subcomponents first (in select mode)
+  // In select mode: pick subcomponent and toggle in selection (dynamic)
   if (currentMode === 'select' && selectedObject) {
-    const picked = subAPI.pickSubcomponent(raycaster, selectedObject);
-    if (picked) {
-      subAPI.setActiveSub(picked);
-      createGizmoFor('translate', picked.worldPos, selectedObject);
-      showConfirm();
-      setEditMode(true);
+    const changed = subAPI.togglePick(raycaster, selectedObject);
+    if (changed) {
+      const center = subAPI.getSelectionWorldCenter();
+      if (center) {
+        createGizmoFor('translate', center, selectedObject, 0.5); // ✅ smaller
+        showConfirm(); // keep visible while selecting more
+      } else {
+        removeGizmo();
+        hideConfirm();
+      }
       return;
     }
   }
 
-  // object pick
+  // Object pick
   const hits = raycaster.intersectObjects(objects, false);
   if (hits.length) {
     const hit = hits[0].object;
-
-    if (multiSelectEnabled) {
-      toggleInMultiSelection(hit);
-      selectedObject = hit;
-      if (!selectedObjects.includes(hit)) selectedObjects.push(hit);
-    } else {
-      selectedObject = hit;
-      selectedObjects = [hit];
-    }
+    selectedObject = hit;
+    subAPI.clearSelection();
     applySelectionUI();
   } else {
-    if (!multiSelectEnabled) deselectAll();
+    deselectAll();
   }
 }
 
@@ -1129,8 +1092,7 @@ function setupPointerEvents() {
     touchStart.set(e.clientX, e.clientY);
     dragStart.set(e.clientX, e.clientY);
 
-    // try handle
-    if (currentGizmo) {
+    if (selectedObject && currentGizmo) {
       const h = getIntersectedHandle(e.clientX, e.clientY);
       if (h) {
         activeHandle = h;
@@ -1141,22 +1103,27 @@ function setupPointerEvents() {
         orbit.enableRotate = false;
         orbit.enablePan = false;
 
+        // snapshot BEFORE for undo transforms
+        if (currentMode !== 'select') selectedObject.userData._dragBefore = snapshotTransform(selectedObject);
+
         saveOriginState();
 
         // begin translate plane if needed
         const axis = activeHandle.userData.axis;
 
-        const box = selectedObject ? new THREE.Box3().setFromObject(selectedObject) : null;
-        const centerW = box ? box.getCenter(new THREE.Vector3()) : (selectedObject ? selectedObject.position.clone() : new THREE.Vector3());
-        const size = box ? box.getSize(new THREE.Vector3()) : new THREE.Vector3(1, 1, 1);
+        const box = new THREE.Box3().setFromObject(selectedObject);
+        const centerW = box.getCenter(new THREE.Vector3());
+        const size = box.getSize(new THREE.Vector3());
         const radius = Math.max(size.x, size.y, size.z) * 0.55;
 
-        const subPos = subAPI.getActiveSubWorldPos();
-        const anchorW = subPos ? subPos.clone() : (currentGizmo ? currentGizmo.position.clone() : centerW.clone());
+        const anchorW = (currentMode === 'select')
+          ? (subAPI.getSelectionWorldCenter() ?? currentGizmo.position.clone())
+          : currentGizmo.position.clone();
 
-        if (currentMode === 'translate' || (currentMode === 'select' && subAPI.hasActiveSub())) {
+        if (currentMode === 'translate' || (currentMode === 'select' && subAPI.hasSelection())) {
           beginTranslateDrag(axis, anchorW, centerW, radius);
           showMeasure();
+          originPosition.copy(anchorW);
           updateMeasureLine(anchorW);
         } else {
           dragState = null;
@@ -1186,12 +1153,8 @@ function setupPointerEvents() {
       if (isEditMode) applyCameraLocks();
       else { orbit.enableZoom = true; orbit.enableRotate = true; orbit.enablePan = true; }
 
-      // push transform action (for objects only) if we were not in sub selection
+      // push transform action if object mode
       if (selectedObject && currentMode !== 'select') {
-        // record transform on mouse-up if changed
-        // (simple strategy: we snapshot at down? for brevity, we capture from originPosition not enough)
-        // We'll do a safe minimal: always push "transform" for object edits by comparing last saved snapshot.
-        // To keep it robust, store a "dragBeforeSnap" in userData.
         const before = selectedObject.userData._dragBefore;
         if (before) {
           const after = snapshotTransform(selectedObject);
@@ -1205,7 +1168,8 @@ function setupPointerEvents() {
         }
       }
 
-      showConfirm();
+      // In select mode, keep confirm visible (don’t force close)
+      if (currentMode === 'select' && subAPI.hasSelection()) showConfirm();
       return;
     }
 
@@ -1222,7 +1186,7 @@ function setupPointerEvents() {
 }
 
 /* =============================
-   MISC UI
+   EDIT BUTTON POSITION
 ============================= */
 function updateEditButtonPosition() {
   if (!selectedObject || !editValuesBtn.classList.contains('visible')) return;
@@ -1235,8 +1199,50 @@ function updateEditButtonPosition() {
 }
 
 /* =============================
+   SUBTOOLBAR HOOKS
+============================= */
+function setSubButtonActive(btn, on) {
+  btn.classList.toggle('active', !!on);
+}
+function refreshSubButtonsFromState() {
+  setSubButtonActive(btnSubVerts, subAPI.getFlags().verts);
+  setSubButtonActive(btnSubEdges, subAPI.getFlags().edges);
+  setSubButtonActive(btnSubFaces, subAPI.getFlags().faces);
+  setSubButtonActive(btnSubExplode, subAPI.getFlags().explode);
+}
+
+btnSubVerts.addEventListener('click', () => {
+  subAPI.setFlags({ verts: !subAPI.getFlags().verts });
+  refreshSubButtonsFromState();
+  if (selectedObject) subAPI.applySubVisibility(selectedObject);
+});
+btnSubEdges.addEventListener('click', () => {
+  subAPI.setFlags({ edges: !subAPI.getFlags().edges });
+  refreshSubButtonsFromState();
+  if (selectedObject) subAPI.applySubVisibility(selectedObject);
+});
+btnSubFaces.addEventListener('click', () => {
+  subAPI.setFlags({ faces: !subAPI.getFlags().faces });
+  refreshSubButtonsFromState();
+  if (selectedObject) subAPI.applySubVisibility(selectedObject);
+});
+btnSubExplode.addEventListener('click', () => {
+  // explode affects vertex grouping behavior (requested)
+  subAPI.setFlags({ explode: !subAPI.getFlags().explode });
+  refreshSubButtonsFromState();
+});
+btnSubClear.addEventListener('click', () => {
+  subAPI.clearSelection();
+  if (selectedObject) subAPI.applySubVisibility(selectedObject);
+  removeGizmo();
+  hideConfirm();
+});
+
+/* =============================
    INIT
 ============================= */
+let subAPI = null;
+
 function init() {
   scene = new THREE.Scene();
   scene.background = new THREE.Color(CFG.bg);
@@ -1278,21 +1284,18 @@ function init() {
   orbit.minDistance = CFG.minZoom;
   orbit.maxDistance = CFG.maxZoom;
 
-  // Subcomponent module setup (gets full access through API)
   subAPI = setupSubcomponents({
     THREE,
     CFG,
     scene,
     camera,
     renderer,
-    raycaster,
-    mouse,
-    pushAction,          // so it can create actions if needed
-    updateGizmoPose,     // to refresh gizmo when sub moves
-    applyRenderMode,
-    getSelectedObject: () => selectedObject,
-    isMobile: () => IS_MOBILE
+    findObjectById: (id) => findById(id)
   });
+
+  // default sub flags: vertices ON, merge ON (explode OFF)
+  subAPI.setFlags({ verts: true, edges: false, faces: false, explode: false });
+  refreshSubButtonsFromState();
 
   setupPointerEvents();
 
@@ -1302,18 +1305,15 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
   });
 
-  // theme
   themeLight.addEventListener('click', () => setTheme('light'));
   themeDark.addEventListener('click', () => setTheme('dark'));
 
-  // overlay start
   btnStart.addEventListener('click', () => {
     overlay.style.opacity = 0;
     setTimeout(() => overlay.style.display = 'none', 450);
     spawn('box');
   });
 
-  // render mode buttons
   renderBar.querySelectorAll('[data-render]').forEach(btn => {
     btn.addEventListener('click', () => {
       renderBar.querySelectorAll('[data-render]').forEach(b => b.classList.remove('active'));
@@ -1324,7 +1324,6 @@ function init() {
     });
   });
 
-  // camera buttons
   cameraBar.querySelectorAll('[data-cam]').forEach(btn => {
     btn.addEventListener('click', () => {
       const c = btn.dataset.cam;
@@ -1334,7 +1333,6 @@ function init() {
     });
   });
 
-  // toolbar (spawn/modes)
   toolbar.querySelectorAll('[data-spawn]').forEach(btn => {
     btn.addEventListener('click', () => spawn(btn.dataset.spawn));
   });
@@ -1342,17 +1340,8 @@ function init() {
     btn.addEventListener('click', () => setMode(btn.dataset.mode));
   });
 
-  // subtoolbar
-  btnSubMulti.addEventListener('click', toggleMultiSelect);
-  btnSubAll.addEventListener('click', toggleAllSelection);
-  btnSubVerts.addEventListener('click', () => { btnSubVerts.classList.toggle('active'); subAPI.setSubFlagsFromUI(); });
-  btnSubEdges.addEventListener('click', () => { btnSubEdges.classList.toggle('active'); subAPI.setSubFlagsFromUI(); });
-  btnSubFaces.addEventListener('click', () => { btnSubFaces.classList.toggle('active'); subAPI.setSubFlagsFromUI(); });
-
-  // exit
   btnExit.addEventListener('click', () => deselectAll());
 
-  // space toggle
   spaceToggle.addEventListener('click', () => {
     currentSpace = (currentSpace === 'world') ? 'local' : 'world';
     spaceToggle.classList.toggle('local', currentSpace === 'local');
@@ -1360,60 +1349,34 @@ function init() {
     spaceText.textContent = (currentSpace === 'local') ? 'Local' : 'Global';
 
     if (selectedObject) {
-      if (currentMode !== 'select') createGizmoFor(currentMode, selectedObject.position, selectedObject);
-      else {
-        const sp = subAPI.getActiveSubWorldPos();
-        if (sp) createGizmoFor('translate', sp, selectedObject);
+      if (currentMode === 'select') {
+        const center = subAPI.getSelectionWorldCenter();
+        if (center) createGizmoFor('translate', center, selectedObject, 0.5);
+      } else {
+        createGizmoFor(currentMode, selectedObject.position, selectedObject, 1.0);
       }
     }
   });
 
-  // edit-values
   editValuesBtn.addEventListener('click', (e) => {
     e.stopPropagation();
     openAxisDialog();
   });
 
-  // store before snapshot at gizmo drag start for transform actions
-  renderer.domElement.addEventListener('pointerdown', () => {
-    if (selectedObject) selectedObject.userData._dragBefore = snapshotTransform(selectedObject);
-  }, { passive: true });
-
   updateUndoRedoUI();
 }
 
-/* =============================
-   SELECTION (object) — performed by submodule? no, here.
-   We let double-tap handle selection.
-   Multi selection is handled in handleDoubleTap.
-============================= */
-
-/* =============================
-   ANIMATE
-============================= */
-let subAPI = null;
-
 function animate() {
   requestAnimationFrame(animate);
-
   if (selectedObject && editValuesBtn.classList.contains('visible')) updateEditButtonPosition();
-  if (selectedObject && currentMode === 'select') subAPI.applySubVisibility(selectedObject);
-
   orbit.update();
   renderer.render(scene, camera);
 }
 
-/* =============================
-   BOOT
-============================= */
 init();
 animate();
 
 /* =============================
-   Expose a minimal debug API (optional)
+   EXPOSE DEBUG (optional)
 ============================= */
-window._mr = {
-  get scene() { return scene; },
-  get camera() { return camera; },
-  get objects() { return objects; }
-};
+window._mr = { get scene(){return scene;}, get camera(){return camera;}, get objects(){return objects;} };
