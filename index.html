@@ -216,6 +216,11 @@
       font-size:12px; font-weight:900;
     }
 
+    .sub-btn.transform.active{
+      background:rgba(255,149,0,.92);
+      box-shadow:0 12px 26px rgba(255,149,0,.18);
+    }
+
     /* measurement */
     #measurement-line{ position:absolute; pointer-events:none; opacity:0; transition:opacity .15s; z-index:155; }
     #measurement-line.visible{ opacity:1; }
@@ -423,6 +428,9 @@
   <!-- Subtoolbar -->
   <div id="subtoolbar-container">
     <div id="subtoolbar">
+      <button class="sub-btn transform active" id="sub-move"><span class="pill">↔️</span>Mover</button>
+      <button class="sub-btn transform" id="sub-rotate"><span class="pill">🔄</span>Rotar</button>
+      <button class="sub-btn transform" id="sub-scale"><span class="pill">🔍</span>Escalar</button>
       <button class="sub-btn" id="sub-verts"><span class="pill">V</span>Vértices</button>
       <button class="sub-btn" id="sub-edges"><span class="pill">E</span>Bordes</button>
       <button class="sub-btn" id="sub-faces"><span class="pill">F</span>Caras</button>
